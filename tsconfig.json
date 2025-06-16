@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "noImplicitAny": false,
+        "target": "es2022"
+    },
+    "include": [
+        "./**/*.ts"
+    ]
+}

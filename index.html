@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Arknights Upgrades Overview</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="app.js"></script>
+    <style>
+        table {
+            border-collapse: collapse;
+            border: 1px solid black;
+            align-self: start;
+        }
+
+        tr {
+            border-top: 1px solid black;
+        }
+
+        td {
+            border: none !important;
+            padding: 2px 16px;
+            max-height: 50px;
+        }
+
+        pre {
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Arknights Account Overview</h1>
+    <p>
+        Account info pulled from Krooster by neia:
+        <a href="https://www.krooster.com" target="_blank">krooster.com</a>
+    </p>
+    <p>
+        Mastery ratings pulled from TacticalBreakfast's spreadsheet:
+        <a href="https://docs.google.com/spreadsheets/d/1iJF12O6QOba1dlUVmobwvc1eBZE7FRB6-tKxmZEcG1I" target="_blank">Google Sheets</a>
+    </p>
+    <p>
+        Module ratings pulled from DragonGJY's spreadsheet:
+        <a href="https://docs.google.com/spreadsheets/d/1A0_0XTAcDDtHkvyAwjTqEEzM8cf5h3E60u23ZVXw4eg" target="_blank">Google Sheets</a>
+    </p>
+    <p>
+        Operator ratings pulled from TacticalBreakfast's spreadsheet:
+        <a href="https://docs.google.com/spreadsheets/d/1E7HmgKWiV8pKpJpvpVzziYxnaQTP01Vtw_PXEdL7XPA" target="_blank">Google Sheets</a>
+    </p>
+
+    <div>
+        <label>Enter Krooster username:</label>
+        <input id="userInput" type="text" disabled />
+        <button id="submitBtn" disabled>Submit</button>
+    </div>
+    <br>
+    <h2>Recommended upgrades</h2>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Highly rated masteries</th>
+                </tr>
+                <tr>
+                    <th title="Story / Advanced / Roguelike">Rating</th>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Upgrades</th>
+                </tr>
+            </thead>
+            <tbody id="masteryTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=3>Breakpoint masteries (already E2'd)</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Upgrades</th>
+                </tr>
+            </thead>
+            <tbody id="breakpointTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Highly rated modules</th>
+                </tr>
+                <tr>
+                    <th title="Module Rating / Improvement to Character / Priority">Rating</th>
+                    <th>Operator</th>
+                    <th>Module</th>
+                    <th>Upgrades</th>
+                </tr>
+            </thead>
+            <tbody id="moduleTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=2>Highly rated unowned operators</th>
+                </tr>
+                <tr>
+                    <th>Rating</th>
+                    <th>Operator</th>
+                </tr>
+            </thead>
+            <tbody id="unownedTable">
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>
