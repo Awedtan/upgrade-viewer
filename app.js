@@ -1,6 +1,6 @@
 const hellaApi = 'https://awedtan.ca/api';
 const proxyUrl = 'https://awedtan.ca/proxy';
-// for masteries, sort them by rating = story+advanced+roguelike
+// for masteries, sort them by rating = story+advanced
 // for modules, sort them by priority
 const ratingScale = ['F', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S-', 'S', 'S+', 'S++', 'EX'];
 const suggestionsLimit = 15;
@@ -24,7 +24,8 @@ function colourLog(str, colour = '', style = '') {
         'italic': '\x1b[3m',
         'underline': '\x1b[4m'
     };
-    console.log(`${colours[colour] ?? ''}${styles[style] ?? ''}${str}\x1b[0m`);
+    // console.log(`${colours[colour] ?? ''}${styles[style] ?? ''}${str}\x1b[0m`);
+    console.log(str);
 }
 function getOpRating(opId, opName = '') {
     if (!overallRatingDict[opId]) {
@@ -79,7 +80,7 @@ async function loadMasteryRatings() {
                     'Лето / Leto': 'Leto',
                     'Greyy the Lightning Bearer': 'Greyy the Lightningbearer',
                     'Sussuro': 'Sussurro',
-                    'Mr.Nothing': 'Mr. Nothing'
+                    'Mr.Nothing': 'Mr. Nothing',
                 };
                 const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
                 try {
@@ -103,7 +104,7 @@ async function loadMasteryRatings() {
                 story: row[2] ?? 'None',
                 advanced: row[3] ?? 'None',
                 roguelike: row[4] ?? 'None',
-                rating: [row[2], row[3], row[4]].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
+                rating: [row[2], row[3]].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
             };
             getOpRating(currOpId).masteries.push(currMastery);
             masteryRatingDict[`${currMastery.operator}_${currMastery.skill}_${currMastery.mastery}`] = currMastery;
@@ -195,7 +196,9 @@ async function loadOperatorRatings() {
                 'Fiametta': 'Fiammetta',
                 'Лето Leto': 'Leto',
                 'Sussuro': 'Sussurro',
-                'Waii Fu': 'Waai Fu'
+                'Waii Fu': 'Waai Fu',
+                'Rosmontis General': 'Rosmontis',
+                'Angelina General': 'Angelina',
             };
             const currOpName = clean(nameOverride[row[j]]) ?? clean(row[j]);
             let currOp;
@@ -250,15 +253,113 @@ document.addEventListener('DOMContentLoaded', async function () {
     const sortedMasteries = Object.values(masteryRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedModules = Object.values(moduleRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedOperators = Object.values(operatorRatingDict).sort((a, b) => b.rating - a.rating);
+    document.getElementById('opInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('opSubmitBtn').click();
+        }
+    });
+    document.getElementById('opInput').removeAttribute('disabled');
+    document.getElementById('opSubmitBtn').addEventListener('click', opOnClick);
+    document.getElementById('opSubmitBtn').removeAttribute('disabled');
     document.getElementById('userInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            document.getElementById('submitBtn').click();
+            document.getElementById('userSubmitBtn').click();
         }
     });
     document.getElementById('userInput').removeAttribute('disabled');
-    document.getElementById('submitBtn').addEventListener('click', onClick);
-    document.getElementById('submitBtn').removeAttribute('disabled');
-    async function onClick() {
+    document.getElementById('userSubmitBtn').addEventListener('click', userOnClick);
+    document.getElementById('userSubmitBtn').removeAttribute('disabled');
+    function populateTable(tableId, data) {
+        const table = document.getElementById(tableId);
+        table.innerHTML = '';
+        data.forEach(row => {
+            const tr = document.createElement('tr');
+            for (const [key, value] of Object.entries(row.values)) {
+                const td = document.createElement('td');
+                if (key === 'operator') {
+                    td.classList.add('operator');
+                    const img = document.createElement('img');
+                    img.src = `https://raw.githubusercontent.com/Awedtan/HellaAssets/refs/heads/main/operator/avatars/${row.id}.png`;
+                    img.alt = value;
+                    img.style.width = '2em';
+                    img.style.height = '2em';
+                    img.style.verticalAlign = 'middle';
+                    td.appendChild(img);
+                    const span = document.createElement('span');
+                    span.textContent = value;
+                    span.style.marginLeft = '0.5em';
+                    td.appendChild(span);
+                }
+                else {
+                    const preformatted = document.createElement('pre');
+                    preformatted.textContent = value;
+                    td.appendChild(preformatted);
+                }
+                tr.appendChild(td);
+            }
+            table.appendChild(tr);
+        });
+    }
+    async function opOnClick() {
+        const elements = ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'];
+        elements.forEach(e => document.getElementById(e).innerHTML = '');
+        const operatorName = document.getElementById('opInput').value;
+        const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
+        if (!operator) {
+            alert(`Operator not found: ${operatorName}`);
+            return;
+        }
+        const op = getOpRating(operator.value.id, operatorName);
+        if (!op) {
+            alert(`Operator not found: ${operatorName}`);
+            return;
+        }
+        try {
+            const ratedMasteries = op.masteries
+                .slice(0, suggestionsLimit)
+                .filter(mastery => !mastery.breakpoint)
+                .map(mastery => ({
+                id: mastery.operator,
+                values: {
+                    operator: `${overallRatingDict[mastery.operator].name}`,
+                    skill: `S${mastery.skill}`,
+                    rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(4)}/ ${mastery.roguelike}`,
+                    mastery: `M${mastery.mastery}`
+                }
+            }));
+            populateTable('opMasteryTable', ratedMasteries);
+            const breakpointMasteries = op.masteries
+                .filter(mastery => mastery.breakpoint)
+                .slice(0, suggestionsLimit)
+                .map(mastery => ({
+                id: mastery.operator,
+                values: {
+                    operator: `${overallRatingDict[mastery.operator].name}`,
+                    skill: `S${mastery.skill}`,
+                    mastery: `M${mastery.mastery}`
+                }
+            }));
+            populateTable('opBreakpointTable', breakpointMasteries);
+            const ratedModules = op.modules
+                .slice(0, suggestionsLimit)
+                .map(module => ({
+                id: module.operator,
+                values: {
+                    operator: `${overallRatingDict[module.operator].name}`,
+                    symbol: `${module.symbol}`,
+                    rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority}`,
+                    level: `L${module.level}`
+                }
+            }));
+            populateTable('opModuleTable', ratedModules);
+            const ratedOperators = [{ id: op.id, values: { operator: `${op.name}`, tier: `${op.operator.tier}` } }];
+            populateTable('opUnownedTable', ratedOperators);
+        }
+        catch (error) {
+            console.error('An error occurred:', error);
+        }
+    }
+    async function userOnClick(op) {
         const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];
         elements.forEach(e => document.getElementById(e).innerHTML = '');
         const username = document.getElementById('userInput').value;
@@ -270,36 +371,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 alert(`User not found: ${username}`);
                 return;
             }
-            const populateTable = (tableId, data) => {
-                const table = document.getElementById(tableId);
-                table.innerHTML = '';
-                data.forEach(row => {
-                    const tr = document.createElement('tr');
-                    for (const [key, value] of Object.entries(row.values)) {
-                        const td = document.createElement('td');
-                        if (key === 'operator') {
-                            const img = document.createElement('img');
-                            img.src = `https://raw.githubusercontent.com/Awedtan/HellaAssets/refs/heads/main/operator/avatars/${row.id}.png`;
-                            img.alt = value;
-                            img.style.width = '2em';
-                            img.style.height = '2em';
-                            img.style.verticalAlign = 'middle';
-                            td.appendChild(img);
-                            const span = document.createElement('span');
-                            span.textContent = value;
-                            span.style.marginLeft = '0.5em';
-                            td.appendChild(span);
-                        }
-                        else {
-                            const preformatted = document.createElement('pre');
-                            preformatted.textContent = value;
-                            td.appendChild(preformatted);
-                        }
-                        tr.appendChild(td);
-                    }
-                    table.appendChild(tr);
-                });
-            };
             const ratedMasteries = sortedMasteries
                 .filter(mastery => {
                 const userOp = userOps.find(op => op.op_id === mastery.operator);
@@ -309,9 +380,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 .map(mastery => ({
                 id: mastery.operator,
                 values: {
-                    rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(4)}/ ${mastery.roguelike}`,
                     operator: `${overallRatingDict[mastery.operator].name}`,
                     skill: `S${mastery.skill}`,
+                    rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(4)}/ ${mastery.roguelike}`,
                     mastery: `M${userOps.find(op => op.op_id === mastery.operator).masteries[mastery.skill - 1]} > M${mastery.mastery}`
                 }
             }));
@@ -340,9 +411,9 @@ document.addEventListener('DOMContentLoaded', async function () {
                 .map(module => ({
                 id: module.operator,
                 values: {
-                    rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority}`,
                     operator: `${overallRatingDict[module.operator].name}`,
                     symbol: `${module.symbol}`,
+                    rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority}`,
                     level: `L${userOps.find(op => op.op_id === module.operator).modules[module.module]} > L${module.level}`
                 }
             }));
@@ -353,8 +424,8 @@ document.addEventListener('DOMContentLoaded', async function () {
                 .map(operator => ({
                 id: operator.operator,
                 values: {
+                    operator: `${overallRatingDict[operator.operator].name}`,
                     tier: `${operator.tier}`,
-                    operator: `${overallRatingDict[operator.operator].name}`
                 }
             }));
             populateTable('unownedTable', ratedOperators);

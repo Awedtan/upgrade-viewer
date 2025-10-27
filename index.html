@@ -13,14 +13,17 @@
             align-self: start;
         }
 
-        tr {
-            border-top: 1px solid black;
+        tr,
+        th,
+        td {
+            border: 1px solid black;
+            padding: 2px 12px;
+            max-height: 50px;
+            text-align: center;
         }
 
-        td {
-            border: none !important;
-            padding: 2px 16px;
-            max-height: 50px;
+        td.operator {
+            text-align: left;
         }
 
         pre {
@@ -30,7 +33,7 @@
 </head>
 
 <body>
-    <h1>Arknights Account Overview</h1>
+    <h1>Arknights Upgrades Overview</h1>
     <p>
         Account info pulled from Krooster by neia:
         <a href="https://www.krooster.com" target="_blank">krooster.com</a>
@@ -48,13 +51,80 @@
         <a href="https://docs.google.com/spreadsheets/d/1E7HmgKWiV8pKpJpvpVzziYxnaQTP01Vtw_PXEdL7XPA" target="_blank">Google Sheets</a>
     </p>
 
+    <h2>Operator lookup</h2>
+    <div>
+        <label>Enter operator name:</label>
+        <input id="opInput" type="text" disabled />
+        <button id="opSubmitBtn" disabled>Submit</button>
+    </div>
+    <br>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Mastery ratings</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th title="Story / Advanced / Roguelike">Rating</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+            <tbody id="opMasteryTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=3>Breakpoint masteries</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+            <tbody id="opBreakpointTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Module ratings</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Module</th>
+                    <th title="Module Rating / Improvement to Character / Priority">Rating</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+            <tbody id="opModuleTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=2>Operator rating</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody id="opUnownedTable">
+            </tbody>
+        </table>
+    </div>
+
+    <h2>Recommended upgrades</h2>
     <div>
         <label>Enter Krooster username:</label>
         <input id="userInput" type="text" disabled />
-        <button id="submitBtn" disabled>Submit</button>
+        <button id="userSubmitBtn" disabled>Submit</button>
     </div>
     <br>
-    <h2>Recommended upgrades</h2>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <table>
             <thead>
@@ -62,9 +132,9 @@
                     <th colspan=4>Highly rated masteries</th>
                 </tr>
                 <tr>
-                    <th title="Story / Advanced / Roguelike">Rating</th>
                     <th>Operator</th>
                     <th>Skill</th>
+                    <th title="Story / Advanced / Roguelike">Rating</th>
                     <th>Upgrades</th>
                 </tr>
             </thead>
@@ -91,9 +161,9 @@
                     <th colspan=4>Highly rated modules</th>
                 </tr>
                 <tr>
-                    <th title="Module Rating / Improvement to Character / Priority">Rating</th>
                     <th>Operator</th>
                     <th>Module</th>
+                    <th title="Module Rating / Improvement to Character / Priority">Rating</th>
                     <th>Upgrades</th>
                 </tr>
             </thead>
@@ -106,8 +176,8 @@
                     <th colspan=2>Highly rated unowned operators</th>
                 </tr>
                 <tr>
-                    <th>Rating</th>
                     <th>Operator</th>
+                    <th>Rating</th>
                 </tr>
             </thead>
             <tbody id="unownedTable">
