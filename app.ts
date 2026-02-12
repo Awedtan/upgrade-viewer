@@ -154,10 +154,10 @@ async function loadMasteryRatings() {
                         break;
                     }
 
-                    if (row2[0].length === 4) {
+                    if (row2[0]?.length === 4 && row2[0][0] === 'S') {
                         currSkill = row2[0];
                     }
-                    else if (row2[0] !== "Skill" && row2[2] && row2[5]) {
+                    else if (row2[0] !== "Skill" && row2[2] && (row2[5] || row2[4])) {
                     }
                     else {
                         continue;
@@ -170,8 +170,8 @@ async function loadMasteryRatings() {
                         skill: Number(!breakpoint ? currSkill[1] : row2[2][14]),
                         mastery: Number(!breakpoint ? currSkill[3] : row2[2][16]),
                         breakpoint: breakpoint,
-                        story: !breakpoint ? row2[2] ?? 'None' : 'None',
-                        advanced: !breakpoint ? row2[5] ?? 'None' : 'None',
+                        story: !breakpoint ? row2[2] ?? 'N/A' : 'N/A',
+                        advanced: !breakpoint ? row2[5].length ? row2[5] : row2[4] ?? 'N/A' : 'N/A',
                         rating: [row2[2], row2[5]].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
                     };
 
