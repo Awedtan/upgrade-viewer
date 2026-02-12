@@ -207,7 +207,8 @@ async function loadModuleRatings() {
 
         const nameOverride = {
             'Pozyomka': 'Pozemka',
-            'Qiu Bai': 'Qiubai'
+            'Qiu Bai': 'Qiubai',
+            'Togawa Sakiko': 'Sakiko Togawa'
         }
         const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
 
