@@ -208,7 +208,8 @@ async function loadModuleRatings() {
         const nameOverride = {
             'Pozyomka': 'Pozemka',
             'Qiu Bai': 'Qiubai',
-            'Togawa Sakiko': 'Sakiko Togawa'
+            'Togawa Sakiko': 'Sakiko Togawa',
+            'Chen Alter2': 'Chen the Dawnstreak'
         }
         const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
 
@@ -282,20 +283,19 @@ async function loadOperatorRatings() {
             if (!row[j])
                 continue;
 
-            const nameOverride = {
-                'Reed the Flameshadow': 'Reed the Flame Shadow',
-                'Phantom General': 'Phantom',
-                'Fiametta': 'Fiammetta',
-                'Лето Leto': 'Leto',
-                'Sussuro': 'Sussurro',
-                'Waii Fu': 'Waai Fu',
-                'Rosmontis General': 'Rosmontis',
-                'Angelina General': 'Angelina',
-                'Mizuki General': 'Mizuki',
-                'Archetto General': 'Archetto',
-                'Swire the Elegant Wit General': 'Swire the Elegant Wit',
+            const fixName = (name: string) => {
+                const nameOverride = {
+                    'Reed the Flameshadow': 'Reed the Flame Shadow',
+                    'Fiametta': 'Fiammetta',
+                    'Лето Leto': 'Leto',
+                    'Sussuro': 'Sussurro',
+                    'Waii Fu': 'Waai Fu'
+                }
+                name = name.endsWith(' General') ? name.slice(0, -8) : name;
+                return nameOverride[name] ?? name;
             }
-            const currOpName = clean(nameOverride[row[j]]) ?? clean(row[j]);
+
+            const currOpName = clean(fixName(row[j])) ?? clean(row[j]);
             let currOp;
             try {
                 currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
@@ -537,6 +537,18 @@ document.addEventListener('DOMContentLoaded', async function () {
                     }
                 }));
             populateTable('moduleTable', ratedModules);
+
+            const unleveledOperators = sortedOperators
+                .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
+                .slice(0, suggestionsLimit)
+                .map(operator => ({
+                    id: operator.operator,
+                    values: {
+                        operator: `${overallRatingDict[operator.operator].name}`,
+                        tier: `${operator.tier.padEnd(2)}`,
+                    }
+                }));
+            populateTable('unleveledTable', unleveledOperators);
 
             const ratedOperators = sortedOperators
                 .filter(operator => !userOps.some(op => op.op_id === operator.operator))

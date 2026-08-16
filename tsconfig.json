@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
-        "noImplicitAny": false,
-        "target": "es2022"
+        "strict": false,
+        "target": "esnext",
     },
     "include": [
         "./**/*.ts"
