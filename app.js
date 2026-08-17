@@ -14,7 +14,6 @@ let sortedMasteries;
 let sortedModules;
 let sortedOperators;
 let currentLimit = suggestionsLimit;
-let lastOp = null;
 let currentUserOps = null;
 const clean = (str) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
 function byId(id) {
@@ -278,9 +277,8 @@ function renderTable(tableId, cols, rows) {
         table.appendChild(tr);
     }
 }
-function renderOperatorLookup(op, limit) {
+function renderOperatorLookup(op) {
     renderTable('opMasteryTable', skillLevelRating, op.masteries
-        .slice(0, limit)
         .filter(mastery => !mastery.breakpoint)
         .map(mastery => ({
         id: mastery.operator,
@@ -291,7 +289,6 @@ function renderOperatorLookup(op, limit) {
     })));
     renderTable('opBreakpointTable', skillLevel, op.masteries
         .filter(mastery => mastery.breakpoint)
-        .slice(0, limit)
         .map(mastery => ({
         id: mastery.operator,
         name: overallRatingDict[mastery.operator].name,
@@ -299,7 +296,6 @@ function renderOperatorLookup(op, limit) {
         level: `M${mastery.mastery}`,
     })));
     renderTable('opModuleTable', symbolLevelRating, op.modules
-        .slice(0, limit)
         .map(module => ({
         id: module.operator,
         name: overallRatingDict[module.operator].name,
@@ -311,8 +307,6 @@ function renderOperatorLookup(op, limit) {
 }
 function setLimit(limit) {
     currentLimit = limit;
-    if (lastOp)
-        renderOperatorLookup(lastOp, limit);
     if (currentUserOps)
         renderAccountOverview(currentUserOps, limit);
 }
@@ -329,8 +323,7 @@ async function opOnClick() {
         alert(`Operator not found: ${operatorName}`);
         return;
     }
-    lastOp = op;
-    renderOperatorLookup(op, currentLimit);
+    renderOperatorLookup(op);
 }
 async function userOnClick() {
     const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];

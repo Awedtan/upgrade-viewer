@@ -63,7 +63,6 @@ let sortedModules: ModuleRating[];
 let sortedOperators: OperatorRating[];
 
 let currentLimit = suggestionsLimit;
-let lastOp: OverallRating | null = null;
 let currentUserOps: KroosterOperator[] | null = null;
 
 const clean = (str: string) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
@@ -375,9 +374,8 @@ function renderTable(tableId: string, cols: Column[], rows: Row[]) {
     }
 }
 
-function renderOperatorLookup(op: OverallRating, limit: number) {
+function renderOperatorLookup(op: OverallRating) {
     renderTable('opMasteryTable', skillLevelRating, op.masteries
-        .slice(0, limit)
         .filter(mastery => !mastery.breakpoint)
         .map(mastery => ({
             id: mastery.operator,
@@ -389,7 +387,6 @@ function renderOperatorLookup(op: OverallRating, limit: number) {
 
     renderTable('opBreakpointTable', skillLevel, op.masteries
         .filter(mastery => mastery.breakpoint)
-        .slice(0, limit)
         .map(mastery => ({
             id: mastery.operator,
             name: overallRatingDict[mastery.operator].name,
@@ -398,7 +395,6 @@ function renderOperatorLookup(op: OverallRating, limit: number) {
         })));
 
     renderTable('opModuleTable', symbolLevelRating, op.modules
-        .slice(0, limit)
         .map(module => ({
             id: module.operator,
             name: overallRatingDict[module.operator].name,
@@ -412,7 +408,6 @@ function renderOperatorLookup(op: OverallRating, limit: number) {
 
 function setLimit(limit: number) {
     currentLimit = limit;
-    if (lastOp) renderOperatorLookup(lastOp, limit);
     if (currentUserOps) renderAccountOverview(currentUserOps, limit);
 }
 
@@ -434,8 +429,7 @@ async function opOnClick() {
         return;
     }
 
-    lastOp = op;
-    renderOperatorLookup(op, currentLimit);
+    renderOperatorLookup(op);
 }
 
 async function userOnClick() {
