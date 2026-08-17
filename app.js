@@ -10,23 +10,12 @@ let overallRatingDict = {};
 let masteryRatingDict = {};
 let moduleRatingDict = {};
 let operatorRatingDict = {};
-const clean = str => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
-function colourLog(str, colour = '', style = '') {
-    const colours = {
-        'red': '\x1b[31m',
-        'green': '\x1b[32m',
-        'yellow': '\x1b[33m',
-        'blue': '\x1b[34m',
-        'magenta': '\x1b[35m',
-        'cyan': '\x1b[36m'
-    };
-    const styles = {
-        'bold': '\x1b[1m',
-        'italic': '\x1b[3m',
-        'underline': '\x1b[4m'
-    };
-    // console.log(`${colours[colour] ?? ''}${styles[style] ?? ''}${str}\x1b[0m`);
-    console.log(str);
+const clean = (str) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
+function byId(id) {
+    const elem = document.getElementById(id);
+    if (!elem)
+        throw new Error(`Missing element with id: ${id}`);
+    return elem;
 }
 function getOpRating(opId, opName = '') {
     if (!overallRatingDict[opId]) {
@@ -36,7 +25,11 @@ function getOpRating(opId, opName = '') {
             masteryDesc: '',
             masteries: [],
             modules: [],
-            operator: null
+            operator: {
+                operator: '',
+                tier: '',
+                rating: 0
+            }
         };
     }
     return overallRatingDict[opId];
@@ -54,15 +47,15 @@ async function loadMasteryRatings() {
         638719893, // supporter
         1272513614, // specialist
     ];
-    colourLog('Loading mastery ratings...', 'yellow');
+    console.info('Loading mastery ratings...');
     const urls = masterySheetGids.map(gid => `${proxyUrl}/sheet?id=${masterySheetId}&gid=${gid}`);
     const responses = (await Promise.all(urls.map(url => fetch(url).then(response => response.text()))));
     const masterySheets = responses.map(data => JSON.parse(data.substring(47).slice(0, -2)));
     let currOpId = '';
     for (const sheet of masterySheets) {
         for (let i = 2; i < sheet.table.rows.length; i++) {
-            const row = sheet.table.rows[i].c.map(e => e?.v ?? '');
-            if (!row || row.filter(e => e !== '').length < 2 || ["Skill", "Full Article"].includes(row[0]) || (row[0][0] === 'S' && row[0][2] === 'M'))
+            const row = sheet.table.rows[i].c.map((e) => e?.v ?? '');
+            if (!row || row.filter((e) => e !== '').length < 2 || ["Skill", "Full Article"].includes(row[0]) || (row[0][0] === 'S' && row[0][2] === 'M'))
                 continue;
             for (let j = 0; j < row.length; j++) {
                 row[j] = clean(row[j]);
@@ -76,20 +69,20 @@ async function loadMasteryRatings() {
                 };
                 const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
                 try {
-                    currOpId = ops.find(e => e.keys.includes(currOpName.toLowerCase())).value.id;
+                    currOpId = ops.find((e) => e.keys.includes(currOpName.toLowerCase())).value.id;
                 }
                 catch (e) {
-                    colourLog(`Mastery: operator ${currOpName} not found`, 'red');
+                    console.error(`Mastery: operator ${currOpName} not found`);
                     continue;
                 }
                 if (!currOpId) {
-                    colourLog(`Mastery: operator ${currOpName} not found`, 'red');
+                    console.error(`Mastery: operator ${currOpName} not found`);
                     continue;
                 }
                 getOpRating(currOpId, currOpName).masteryDesc = row[9] ?? 'N/A';
                 let currSkill = '';
                 for (let j = i + 1; j < sheet.table.rows.length; j++) {
-                    const row2 = sheet.table.rows[j].c.map(e => e?.v ?? '');
+                    const row2 = sheet.table.rows[j].c.map((e) => e?.v ?? '');
                     if (row2[9]) {
                         i = j;
                         break;
@@ -118,18 +111,18 @@ async function loadMasteryRatings() {
             }
         }
     }
-    colourLog('Mastery ratings loaded.', 'yellow');
+    console.info('Mastery ratings loaded.');
 }
 async function loadModuleRatings() {
     const moduleSheetId = '1A0_0XTAcDDtHkvyAwjTqEEzM8cf5h3E60u23ZVXw4eg';
     const moduleSheetGid = '0';
-    colourLog('Loading module ratings...', 'yellow');
+    console.info('Loading module ratings...');
     const url = `${proxyUrl}/sheet?id=${moduleSheetId}&gid=${moduleSheetGid}`;
     const response = await fetch(url).then(response => response.text());
     const moduleSheet = JSON.parse(response.substring(47).slice(0, -2));
     for (let i = 2; i < moduleSheet.table.rows.length; i++) {
-        const row = moduleSheet.table.rows[i].c.map(e => e?.v ?? '');
-        if (!row || row.filter(e => e !== '').length != 10)
+        const row = moduleSheet.table.rows[i].c.map((e) => e?.v ?? '');
+        if (!row || row.filter((e) => e !== '').length != 10)
             continue;
         for (let j = 0; j < row.length; j++) {
             row[j] = clean(row[j]);
@@ -146,21 +139,21 @@ async function loadModuleRatings() {
             currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
         }
         catch (e) {
-            colourLog(`Module: operator ${currOpName} not found`, 'red');
+            console.error(`Module: operator ${currOpName} not found`);
             continue;
         }
         if (!currOp) {
-            colourLog(`Module: operator ${currOpName} not found`, 'red');
+            console.error(`Module: operator ${currOpName} not found`);
             continue;
         }
         if (currOp.modules.length === 0) {
-            colourLog(`Module: operator ${currOpName} has no modules`, 'red');
+            console.error(`Module: operator ${currOpName} has no modules`);
             continue;
         }
         const moduleNameMap = { 'X': 'X', 'Y': 'Y', 'Δ': 'D' };
-        const currModuleId = currOp.modules.find(m => m.info.typeName2 === moduleNameMap[row[2]])?.info.uniEquipId;
+        const currModuleId = currOp.modules.find((m) => m.info.typeName2 === moduleNameMap[row[2]])?.info.uniEquipId;
         if (!currModuleId) {
-            colourLog(`Module: module ${row[2]} for ${currOpName} not found`, 'red');
+            console.error(`Module: module ${row[2]} for ${currOpName} not found`);
             continue;
         }
         const currModule = {
@@ -177,18 +170,18 @@ async function loadModuleRatings() {
         getOpRating(currOp.id, currOpName).modules.push(currModule);
         moduleRatingDict[currModule.operator + currModule.module] = currModule;
     }
-    colourLog('Module ratings loaded.', 'yellow');
+    console.info('Module ratings loaded.');
 }
 async function loadOperatorRatings() {
     const operatorSheetId = '1E7HmgKWiV8pKpJpvpVzziYxnaQTP01Vtw_PXEdL7XPA';
     const operatorSheetGid = '1108925005';
-    colourLog('Loading operator ratings...', 'yellow');
+    console.info('Loading operator ratings...');
     const url = `${proxyUrl}/sheet?id=${operatorSheetId}&gid=${operatorSheetGid}`;
     const response = await fetch(url).then(response => response.text());
     const operatorSheet = JSON.parse(response.substring(47).slice(0, -2));
     let currRating = 'EX';
     for (let i = 2; i < operatorSheet.table.rows.length; i++) {
-        const row = operatorSheet.table.rows[i].c.map(e => e?.v ?? '');
+        const row = operatorSheet.table.rows[i].c.map((e) => e?.v ?? '');
         if (!row)
             continue;
         for (let j = 0; j < row.length; j++) {
@@ -217,11 +210,11 @@ async function loadOperatorRatings() {
                 currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
             }
             catch (e) {
-                colourLog(`Operator: operator ${currOpName} not found`, 'red');
+                console.error(`Operator: operator ${currOpName} not found`);
                 continue;
             }
             if (!currOp) {
-                colourLog(`Operator: operator ${currOpName} not found`, 'red');
+                console.error(`Operator: operator ${currOpName} not found`);
                 continue;
             }
             const currOpRating = {
@@ -246,42 +239,35 @@ async function loadKrooster(username) {
     }
 }
 document.addEventListener('DOMContentLoaded', async function () {
-    colourLog('Arknights Upgrades Overview', 'cyan', 'bold');
-    console.log('Account info pulled from Krooster by neia:');
-    colourLog('https://www.krooster.com', 'blue', 'underline');
-    console.log('Mastery ratings pulled from TacticalBreakfast\'s spreadsheet:');
-    colourLog('https://docs.google.com/spreadsheets/d/1iJF12O6QOba1dlUVmobwvc1eBZE7FRB6-tKxmZEcG1I', 'blue', 'underline');
-    console.log('Module ratings pulled from DragonGJY\'s spreadsheet:');
-    colourLog('https://docs.google.com/spreadsheets/d/1A0_0XTAcDDtHkvyAwjTqEEzM8cf5h3E60u23ZVXw4eg', 'blue', 'underline');
-    colourLog('Loading operator data...', 'yellow');
+    console.info('Loading operator data...');
     ops = await (await fetch(`${hellaApi}/operator?include=id&include=modules`)).json();
     await Promise.all([
         loadMasteryRatings(),
         loadModuleRatings(),
         loadOperatorRatings()
     ]);
-    colourLog('Data successfully loaded.', 'green');
+    console.info('Data successfully loaded.');
     const sortedMasteries = Object.values(masteryRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedModules = Object.values(moduleRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedOperators = Object.values(operatorRatingDict).sort((a, b) => b.rating - a.rating);
-    document.getElementById('opInput').addEventListener('keypress', (e) => {
+    byId('opInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            document.getElementById('opSubmitBtn').click();
+            byId('opSubmitBtn').click();
         }
     });
-    document.getElementById('opInput').removeAttribute('disabled');
-    document.getElementById('opSubmitBtn').addEventListener('click', opOnClick);
-    document.getElementById('opSubmitBtn').removeAttribute('disabled');
-    document.getElementById('userInput').addEventListener('keypress', (e) => {
+    byId('opInput').removeAttribute('disabled');
+    byId('opSubmitBtn').addEventListener('click', opOnClick);
+    byId('opSubmitBtn').removeAttribute('disabled');
+    byId('userInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            document.getElementById('userSubmitBtn').click();
+            byId('userSubmitBtn').click();
         }
     });
-    document.getElementById('userInput').removeAttribute('disabled');
-    document.getElementById('userSubmitBtn').addEventListener('click', userOnClick);
-    document.getElementById('userSubmitBtn').removeAttribute('disabled');
+    byId('userInput').removeAttribute('disabled');
+    byId('userSubmitBtn').addEventListener('click', userOnClick);
+    byId('userSubmitBtn').removeAttribute('disabled');
     function populateTable(tableId, data) {
-        const table = document.getElementById(tableId);
+        const table = byId(tableId);
         table.innerHTML = '';
         data.forEach(row => {
             const tr = document.createElement('tr');
@@ -313,8 +299,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     }
     async function opOnClick() {
         const elements = ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'];
-        elements.forEach(e => document.getElementById(e).innerHTML = '');
-        const operatorName = document.getElementById('opInput').value;
+        elements.forEach((e) => byId(e).innerHTML = '');
+        const operatorName = byId('opInput').value;
         const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
         if (!operator) {
             alert(`Operator not found: ${operatorName}`);
@@ -370,10 +356,10 @@ document.addEventListener('DOMContentLoaded', async function () {
             console.error('An error occurred:', error);
         }
     }
-    async function userOnClick(op) {
+    async function userOnClick() {
         const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];
-        elements.forEach(e => document.getElementById(e).innerHTML = '');
-        const username = document.getElementById('userInput').value;
+        elements.forEach((e) => byId(e).innerHTML = '');
+        const username = byId('userInput').value;
         if (!username)
             return;
         try {
@@ -393,7 +379,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 values: {
                     operator: `${overallRatingDict[mastery.operator].name}`,
                     skill: `S${mastery.skill}`,
-                    mastery: `M${userOps.find(op => op.op_id === mastery.operator).masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+                    mastery: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
                     rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
                 }
             }));
@@ -409,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 values: {
                     operator: `${overallRatingDict[mastery.operator].name}`,
                     skill: `S${mastery.skill}`,
-                    mastery: `M${userOps.find(op => op.op_id === mastery.operator).masteries[mastery.skill - 1]} > M${mastery.mastery}`
+                    mastery: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`
                 }
             }));
             populateTable('breakpointTable', breakpointMasteries);
@@ -424,7 +410,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                 values: {
                     operator: `${overallRatingDict[module.operator].name}`,
                     symbol: `${module.symbol}`,
-                    level: `L${userOps.find(op => op.op_id === module.operator).modules[module.module]} > L${module.level}`,
+                    level: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
                     rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
                 }
             }));

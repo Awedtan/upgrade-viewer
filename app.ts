@@ -60,22 +60,10 @@ let operatorRatingDict: { [key: string]: OperatorRating } = {};
 
 const clean = (str: string) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
 
-function colourLog(str: string, colour = '', style = '') {
-    const colours = {
-        'red': '\x1b[31m',
-        'green': '\x1b[32m',
-        'yellow': '\x1b[33m',
-        'blue': '\x1b[34m',
-        'magenta': '\x1b[35m',
-        'cyan': '\x1b[36m'
-    }
-    const styles = {
-        'bold': '\x1b[1m',
-        'italic': '\x1b[3m',
-        'underline': '\x1b[4m'
-    }
-    // console.log(`${colours[colour] ?? ''}${styles[style] ?? ''}${str}\x1b[0m`);
-    console.log(str);
+function byId(id: string) {
+    const elem = document.getElementById(id);
+    if (!elem) throw new Error(`Missing element with id: ${id}`);
+    return elem as HTMLElement;
 }
 
 function getOpRating(opId: string, opName: string = ''): OverallRating {
@@ -110,7 +98,7 @@ async function loadMasteryRatings() {
         1272513614,  // specialist
     ];
 
-    colourLog('Loading mastery ratings...', 'yellow');
+    console.info('Loading mastery ratings...');
 
     const urls = masterySheetGids.map(gid => `${proxyUrl}/sheet?id=${masterySheetId}&gid=${gid}`);
     const responses = (await Promise.all(urls.map(url => fetch(url).then(response => response.text()))));
@@ -139,11 +127,11 @@ async function loadMasteryRatings() {
                 try {
                     currOpId = ops.find((e: any) => e.keys.includes(currOpName.toLowerCase())).value.id;
                 } catch (e) {
-                    colourLog(`Mastery: operator ${currOpName} not found`, 'red');
+                    console.error(`Mastery: operator ${currOpName} not found`);
                     continue;
                 }
                 if (!currOpId) {
-                    colourLog(`Mastery: operator ${currOpName} not found`, 'red');
+                    console.error(`Mastery: operator ${currOpName} not found`);
                     continue;
                 }
 
@@ -186,14 +174,14 @@ async function loadMasteryRatings() {
         }
     }
 
-    colourLog('Mastery ratings loaded.', 'yellow');
+    console.info('Mastery ratings loaded.');
 }
 
 async function loadModuleRatings() {
     const moduleSheetId = '1A0_0XTAcDDtHkvyAwjTqEEzM8cf5h3E60u23ZVXw4eg'
     const moduleSheetGid = '0';
 
-    colourLog('Loading module ratings...', 'yellow');
+    console.info('Loading module ratings...');
 
     const url = `${proxyUrl}/sheet?id=${moduleSheetId}&gid=${moduleSheetGid}`;
     const response = await fetch(url).then(response => response.text());
@@ -221,15 +209,15 @@ async function loadModuleRatings() {
         try {
             currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
         } catch (e) {
-            colourLog(`Module: operator ${currOpName} not found`, 'red');
+            console.error(`Module: operator ${currOpName} not found`);
             continue;
         }
         if (!currOp) {
-            colourLog(`Module: operator ${currOpName} not found`, 'red');
+            console.error(`Module: operator ${currOpName} not found`);
             continue;
         }
         if (currOp.modules.length === 0) {
-            colourLog(`Module: operator ${currOpName} has no modules`, 'red');
+            console.error(`Module: operator ${currOpName} has no modules`);
             continue;
         }
 
@@ -237,7 +225,7 @@ async function loadModuleRatings() {
         const currModuleId = currOp.modules.find((m: any) => m.info.typeName2 === moduleNameMap[row[2]])?.info.uniEquipId;
 
         if (!currModuleId) {
-            colourLog(`Module: module ${row[2]} for ${currOpName} not found`, 'red');
+            console.error(`Module: module ${row[2]} for ${currOpName} not found`);
             continue;
         }
 
@@ -257,14 +245,14 @@ async function loadModuleRatings() {
         moduleRatingDict[currModule.operator + currModule.module] = currModule;
     }
 
-    colourLog('Module ratings loaded.', 'yellow');
+    console.info('Module ratings loaded.');
 }
 
 async function loadOperatorRatings() {
     const operatorSheetId = '1E7HmgKWiV8pKpJpvpVzziYxnaQTP01Vtw_PXEdL7XPA';
     const operatorSheetGid = '1108925005';
 
-    colourLog('Loading operator ratings...', 'yellow');
+    console.info('Loading operator ratings...');
 
     const url = `${proxyUrl}/sheet?id=${operatorSheetId}&gid=${operatorSheetGid}`;
     const response = await fetch(url).then(response => response.text());
@@ -305,11 +293,11 @@ async function loadOperatorRatings() {
                 currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
             }
             catch (e) {
-                colourLog(`Operator: operator ${currOpName} not found`, 'red');
+                console.error(`Operator: operator ${currOpName} not found`);
                 continue;
             }
             if (!currOp) {
-                colourLog(`Operator: operator ${currOpName} not found`, 'red');
+                console.error(`Operator: operator ${currOpName} not found`,);
                 continue;
             }
 
@@ -337,46 +325,38 @@ async function loadKrooster(username: string) {
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
-    colourLog('Arknights Upgrades Overview', 'cyan', 'bold');
-    console.log('Account info pulled from Krooster by neia:');
-    colourLog('https://www.krooster.com', 'blue', 'underline');
-    console.log('Mastery ratings pulled from TacticalBreakfast\'s spreadsheet:');
-    colourLog('https://docs.google.com/spreadsheets/d/1iJF12O6QOba1dlUVmobwvc1eBZE7FRB6-tKxmZEcG1I', 'blue', 'underline');
-    console.log('Module ratings pulled from DragonGJY\'s spreadsheet:');
-    colourLog('https://docs.google.com/spreadsheets/d/1A0_0XTAcDDtHkvyAwjTqEEzM8cf5h3E60u23ZVXw4eg', 'blue', 'underline');
-
-    colourLog('Loading operator data...', 'yellow');
+    console.info('Loading operator data...');
     ops = await (await fetch(`${hellaApi}/operator?include=id&include=modules`)).json();
     await Promise.all([
         loadMasteryRatings(),
         loadModuleRatings(),
         loadOperatorRatings()
     ]);
-    colourLog('Data successfully loaded.', 'green');
+    console.info('Data successfully loaded.');
     const sortedMasteries = Object.values(masteryRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedModules = Object.values(moduleRatingDict).sort((a, b) => b.rating - a.rating);
     const sortedOperators = Object.values(operatorRatingDict).sort((a, b) => b.rating - a.rating);
 
-    document.getElementById('opInput').addEventListener('keypress', (e) => {
+    byId('opInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            document.getElementById('opSubmitBtn').click();
+            byId('opSubmitBtn').click();
         }
     });
-    document.getElementById('opInput').removeAttribute('disabled');
-    document.getElementById('opSubmitBtn').addEventListener('click', opOnClick);
-    document.getElementById('opSubmitBtn').removeAttribute('disabled');
+    byId('opInput').removeAttribute('disabled');
+    byId('opSubmitBtn').addEventListener('click', opOnClick);
+    byId('opSubmitBtn').removeAttribute('disabled');
 
-    document.getElementById('userInput').addEventListener('keypress', (e) => {
+    byId('userInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            document.getElementById('userSubmitBtn').click();
+            byId('userSubmitBtn').click();
         }
     });
-    document.getElementById('userInput').removeAttribute('disabled');
-    document.getElementById('userSubmitBtn').addEventListener('click', userOnClick);
-    document.getElementById('userSubmitBtn').removeAttribute('disabled');
+    byId('userInput').removeAttribute('disabled');
+    byId('userSubmitBtn').addEventListener('click', userOnClick);
+    byId('userSubmitBtn').removeAttribute('disabled');
 
     function populateTable(tableId: string, data: { id: string, values: { [key: string]: any } }[]) {
-        const table = document.getElementById(tableId);
+        const table = byId(tableId);
         table.innerHTML = '';
         data.forEach(row => {
             const tr = document.createElement('tr');
@@ -411,9 +391,9 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     async function opOnClick() {
         const elements = ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'];
-        elements.forEach((e: any) => document.getElementById(e).innerHTML = '');
+        elements.forEach((e: any) => byId(e).innerHTML = '');
 
-        const operatorName = (document.getElementById('opInput') as HTMLInputElement).value;
+        const operatorName = (byId('opInput') as HTMLInputElement).value;
         const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
 
         if (!operator) {
@@ -476,11 +456,11 @@ document.addEventListener('DOMContentLoaded', async function () {
         }
     }
 
-    async function userOnClick(op) {
+    async function userOnClick() {
         const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];
-        elements.forEach((e: any) => document.getElementById(e).innerHTML = '');
+        elements.forEach((e: any) => byId(e).innerHTML = '');
 
-        const username = (document.getElementById('userInput') as HTMLInputElement).value;
+        const username = (byId('userInput') as HTMLInputElement).value;
 
         if (!username)
             return;

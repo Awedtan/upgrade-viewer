@@ -1,6 +1,5 @@
 {
     "compilerOptions": {
-        "strict": false,
         "target": "esnext",
     },
     "include": [
