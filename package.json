@@ -1,0 +1,6 @@
+{
+    "scripts": {
+        "build": "tsc",
+        "serve": "python3 server/server.py"
+    }
+}

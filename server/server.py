@@ -18,7 +18,6 @@ def krooster_accounts():
     try:
         response = requests.get(
             f'{kroosterApi}/krooster_accounts?select=*&username=eq.{username}&limit=1', headers=kroosterHeaders)
-        print(response.content)
         return (response.content, response.status_code, {
             'Content-Type': response.headers.get('Content-Type')
         })
@@ -41,20 +40,16 @@ def krooster_operators():
 
 @app.route('/sheet', methods=['GET'])
 def sheet():
-    print("asdf")
     id = request.args.get('id')
     gid = request.args.get('gid')
     try:
-        print("hey")
         print(f'https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:json&tq&gid={gid}')
         response = requests.get(f'https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:json&tq&gid={gid}')
-        print("qwer")
         return (response.content, response.status_code, {
             'Content-Type': response.headers.get('Content-Type')
         })
     except requests.exceptions.RequestException as e:
         return jsonify({'error': str(e)}), 500
-    print("oops")
 
 if __name__ == '__main__':
     app.run(port=3001)

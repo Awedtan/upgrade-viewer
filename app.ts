@@ -58,7 +58,7 @@ let masteryRatingDict: { [key: string]: MasteryRating } = {};
 let moduleRatingDict: { [key: string]: ModuleRating } = {};
 let operatorRatingDict: { [key: string]: OperatorRating } = {};
 
-const clean = str => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
+const clean = (str: string) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
 
 function colourLog(str: string, colour = '', style = '') {
     const colours = {
@@ -86,7 +86,11 @@ function getOpRating(opId: string, opName: string = ''): OverallRating {
             masteryDesc: '',
             masteries: [],
             modules: [],
-            operator: null
+            operator: {
+                operator: '',
+                tier: '',
+                rating: 0
+            }
         };
     }
     return overallRatingDict[opId];
@@ -115,8 +119,8 @@ async function loadMasteryRatings() {
     let currOpId = '';
     for (const sheet of masterySheets) {
         for (let i = 2; i < sheet.table.rows.length; i++) {
-            const row: string[] = sheet.table.rows[i].c.map(e => e?.v ?? '');
-            if (!row || row.filter(e => e !== '').length < 2 || ["Skill", "Full Article"].includes(row[0]) || (row[0][0] === 'S' && row[0][2] === 'M'))
+            const row: string[] = sheet.table.rows[i].c.map((e: any) => e?.v ?? '');
+            if (!row || row.filter((e: any) => e !== '').length < 2 || ["Skill", "Full Article"].includes(row[0]) || (row[0][0] === 'S' && row[0][2] === 'M'))
                 continue;
 
             for (let j = 0; j < row.length; j++) {
@@ -124,7 +128,7 @@ async function loadMasteryRatings() {
             }
 
             if (row[0] && row[0] !== '') {
-                const nameOverride = {
+                const nameOverride: { [key: string]: string } = {
                     'Лето / Leto': 'Leto',
                     'Greyy the Lightning Bearer': 'Greyy the Lightningbearer',
                     'Sussuro': 'Sussurro',
@@ -133,7 +137,7 @@ async function loadMasteryRatings() {
                 const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
 
                 try {
-                    currOpId = ops.find(e => e.keys.includes(currOpName.toLowerCase())).value.id;
+                    currOpId = ops.find((e: any) => e.keys.includes(currOpName.toLowerCase())).value.id;
                 } catch (e) {
                     colourLog(`Mastery: operator ${currOpName} not found`, 'red');
                     continue;
@@ -147,7 +151,7 @@ async function loadMasteryRatings() {
 
                 let currSkill = '';
                 for (let j = i + 1; j < sheet.table.rows.length; j++) {
-                    const row2: string[] = sheet.table.rows[j].c.map(e => e?.v ?? '');
+                    const row2: string[] = sheet.table.rows[j].c.map((e: any) => e?.v ?? '');
 
                     if (row2[9]) {
                         i = j;
@@ -196,16 +200,16 @@ async function loadModuleRatings() {
     const moduleSheet = JSON.parse(response.substring(47).slice(0, -2));
 
     for (let i = 2; i < moduleSheet.table.rows.length; i++) {
-        const row = moduleSheet.table.rows[i].c.map(e => e?.v ?? '');
+        const row = moduleSheet.table.rows[i].c.map((e: any) => e?.v ?? '');
 
-        if (!row || row.filter(e => e !== '').length != 10)
+        if (!row || row.filter((e: any) => e !== '').length != 10)
             continue;
 
         for (let j = 0; j < row.length; j++) {
             row[j] = clean(row[j]);
         }
 
-        const nameOverride = {
+        const nameOverride: { [key: string]: string } = {
             'Pozyomka': 'Pozemka',
             'Qiu Bai': 'Qiubai',
             'Togawa Sakiko': 'Sakiko Togawa',
@@ -229,8 +233,8 @@ async function loadModuleRatings() {
             continue;
         }
 
-        const moduleNameMap = { 'X': 'X', 'Y': 'Y', 'Δ': 'D' }
-        const currModuleId = currOp.modules.find(m => m.info.typeName2 === moduleNameMap[row[2]])?.info.uniEquipId;
+        const moduleNameMap: { [key: string]: string } = { 'X': 'X', 'Y': 'Y', 'Δ': 'D' }
+        const currModuleId = currOp.modules.find((m: any) => m.info.typeName2 === moduleNameMap[row[2]])?.info.uniEquipId;
 
         if (!currModuleId) {
             colourLog(`Module: module ${row[2]} for ${currOpName} not found`, 'red');
@@ -268,7 +272,7 @@ async function loadOperatorRatings() {
 
     let currRating = 'EX';
     for (let i = 2; i < operatorSheet.table.rows.length; i++) {
-        const row = operatorSheet.table.rows[i].c.map(e => e?.v ?? '');
+        const row = operatorSheet.table.rows[i].c.map((e: any) => e?.v ?? '');
 
         if (!row)
             continue;
@@ -284,7 +288,7 @@ async function loadOperatorRatings() {
                 continue;
 
             const fixName = (name: string) => {
-                const nameOverride = {
+                const nameOverride: { [key: string]: string } = {
                     'Reed the Flameshadow': 'Reed the Flame Shadow',
                     'Fiametta': 'Fiammetta',
                     'Лето Leto': 'Leto',
@@ -320,7 +324,7 @@ async function loadOperatorRatings() {
     }
 }
 
-async function loadKrooster(username) {
+async function loadKrooster(username: string) {
     try {
         const userAccount = (await (await fetch(`${proxyUrl}/krooster_accounts?username=${username}`)).json())[0];
         const userId = userAccount.user_id;
@@ -371,7 +375,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     document.getElementById('userSubmitBtn').addEventListener('click', userOnClick);
     document.getElementById('userSubmitBtn').removeAttribute('disabled');
 
-    function populateTable(tableId, data: { id: string, values: { [key: string]: any } }[]) {
+    function populateTable(tableId: string, data: { id: string, values: { [key: string]: any } }[]) {
         const table = document.getElementById(tableId);
         table.innerHTML = '';
         data.forEach(row => {
@@ -407,7 +411,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     async function opOnClick() {
         const elements = ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'];
-        elements.forEach(e => document.getElementById(e).innerHTML = '');
+        elements.forEach((e: any) => document.getElementById(e).innerHTML = '');
 
         const operatorName = (document.getElementById('opInput') as HTMLInputElement).value;
         const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
@@ -474,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 
     async function userOnClick(op) {
         const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];
-        elements.forEach(e => document.getElementById(e).innerHTML = '');
+        elements.forEach((e: any) => document.getElementById(e).innerHTML = '');
 
         const username = (document.getElementById('userInput') as HTMLInputElement).value;
 
@@ -499,7 +503,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     values: {
                         operator: `${overallRatingDict[mastery.operator].name}`,
                         skill: `S${mastery.skill}`,
-                        mastery: `M${userOps.find(op => op.op_id === mastery.operator).masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+                        mastery: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
                         rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
                     }
                 }));
@@ -516,7 +520,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     values: {
                         operator: `${overallRatingDict[mastery.operator].name}`,
                         skill: `S${mastery.skill}`,
-                        mastery: `M${userOps.find(op => op.op_id === mastery.operator).masteries[mastery.skill - 1]} > M${mastery.mastery}`
+                        mastery: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`
                     }
                 }));
             populateTable('breakpointTable', breakpointMasteries);
@@ -532,7 +536,7 @@ document.addEventListener('DOMContentLoaded', async function () {
                     values: {
                         operator: `${overallRatingDict[module.operator].name}`,
                         symbol: `${module.symbol}`,
-                        level: `L${userOps.find(op => op.op_id === module.operator).modules[module.module]} > L${module.level}`,
+                        level: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
                         rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
                     }
                 }));
