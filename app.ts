@@ -62,6 +62,10 @@ let sortedMasteries: MasteryRating[];
 let sortedModules: ModuleRating[];
 let sortedOperators: OperatorRating[];
 
+let currentLimit = suggestionsLimit;
+let lastOp: OverallRating | null = null;
+let currentUserOps: KroosterOperator[] | null = null;
+
 const clean = (str: string) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
 
 function byId(id: string) {
@@ -371,6 +375,47 @@ function renderTable(tableId: string, cols: Column[], rows: Row[]) {
     }
 }
 
+function renderOperatorLookup(op: OverallRating, limit: number) {
+    renderTable('opMasteryTable', skillLevelRating, op.masteries
+        .slice(0, limit)
+        .filter(mastery => !mastery.breakpoint)
+        .map(mastery => ({
+            id: mastery.operator,
+            name: overallRatingDict[mastery.operator].name,
+            skill: `S${mastery.skill}`,
+            level: `M${mastery.mastery}`,
+            rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
+        })));
+
+    renderTable('opBreakpointTable', skillLevel, op.masteries
+        .filter(mastery => mastery.breakpoint)
+        .slice(0, limit)
+        .map(mastery => ({
+            id: mastery.operator,
+            name: overallRatingDict[mastery.operator].name,
+            skill: `S${mastery.skill}`,
+            level: `M${mastery.mastery}`,
+        })));
+
+    renderTable('opModuleTable', symbolLevelRating, op.modules
+        .slice(0, limit)
+        .map(module => ({
+            id: module.operator,
+            name: overallRatingDict[module.operator].name,
+            symbol: module.symbol,
+            level: `L${module.level}`,
+            rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
+        })));
+
+    renderTable('opUnownedTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
+}
+
+function setLimit(limit: number) {
+    currentLimit = limit;
+    if (lastOp) renderOperatorLookup(lastOp, limit);
+    if (currentUserOps) renderAccountOverview(currentUserOps, limit);
+}
+
 async function opOnClick() {
     ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'].forEach(e => byId(e).innerHTML = '');
 
@@ -389,38 +434,8 @@ async function opOnClick() {
         return;
     }
 
-    renderTable('opMasteryTable', skillLevelRating, op.masteries
-        .slice(0, suggestionsLimit)
-        .filter(mastery => !mastery.breakpoint)
-        .map(mastery => ({
-            id: mastery.operator,
-            name: overallRatingDict[mastery.operator].name,
-            skill: `S${mastery.skill}`,
-            level: `M${mastery.mastery}`,
-            rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
-        })));
-
-    renderTable('opBreakpointTable', skillLevel, op.masteries
-        .filter(mastery => mastery.breakpoint)
-        .slice(0, suggestionsLimit)
-        .map(mastery => ({
-            id: mastery.operator,
-            name: overallRatingDict[mastery.operator].name,
-            skill: `S${mastery.skill}`,
-            level: `M${mastery.mastery}`,
-        })));
-
-    renderTable('opModuleTable', symbolLevelRating, op.modules
-        .slice(0, suggestionsLimit)
-        .map(module => ({
-            id: module.operator,
-            name: overallRatingDict[module.operator].name,
-            symbol: module.symbol,
-            level: `L${module.level}`,
-            rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
-        })));
-
-    renderTable('opUnownedTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
+    lastOp = op;
+    renderOperatorLookup(op, currentLimit);
 }
 
 async function userOnClick() {
@@ -438,68 +453,72 @@ async function userOnClick() {
             alert(`User not found: ${username}`);
             return;
         }
-
-        renderTable('masteryTable', skillUpgradeRating, sortedMasteries
-            .filter(mastery => {
-                const userOp = userOps.find(op => op.op_id === mastery.operator);
-                return userOp && userOp.masteries[mastery.skill - 1] < mastery.mastery;
-            })
-            .slice(0, suggestionsLimit)
-            .map(mastery => ({
-                id: mastery.operator,
-                name: overallRatingDict[mastery.operator].name,
-                skill: `S${mastery.skill}`,
-                upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
-                rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
-            })));
-
-        renderTable('breakpointTable', skillUpgrade, sortedMasteries
-            .filter(mastery => {
-                const userOp = userOps.find(op => op.op_id === mastery.operator);
-                return userOp && userOp.elite === 2 && userOp.masteries[mastery.skill - 1] < mastery.mastery && mastery.breakpoint;
-            })
-            .slice(0, suggestionsLimit)
-            .map(mastery => ({
-                id: mastery.operator,
-                name: overallRatingDict[mastery.operator].name,
-                skill: `S${mastery.skill}`,
-                upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
-            })));
-
-        renderTable('moduleTable', symbolUpgradeRating, sortedModules
-            .filter(module => {
-                const userOp = userOps.find(op => op.op_id === module.operator);
-                return userOp && userOp.modules[module.module] < module.level;
-            })
-            .slice(0, suggestionsLimit)
-            .map(module => ({
-                id: module.operator,
-                name: overallRatingDict[module.operator].name,
-                symbol: module.symbol,
-                upgrade: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
-                rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
-            })));
-
-        renderTable('unleveledTable', tier, sortedOperators
-            .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
-            .slice(0, suggestionsLimit)
-            .map(operator => ({
-                id: operator.operator,
-                name: overallRatingDict[operator.operator].name,
-                tier: operator.tier.padEnd(2),
-            })));
-
-        renderTable('unownedTable', tier, sortedOperators
-            .filter(operator => !userOps.some(op => op.op_id === operator.operator))
-            .slice(0, suggestionsLimit)
-            .map(operator => ({
-                id: operator.operator,
-                name: overallRatingDict[operator.operator].name,
-                tier: operator.tier.padEnd(2),
-            })));
+        currentUserOps = userOps;
+        renderAccountOverview(userOps, currentLimit);
     } catch (error) {
         console.error('An error occurred:', error);
     }
+}
+
+function renderAccountOverview(userOps: KroosterOperator[], limit: number) {
+    renderTable('masteryTable', skillUpgradeRating, sortedMasteries
+        .filter(mastery => {
+            const userOp = userOps.find(op => op.op_id === mastery.operator);
+            return userOp && userOp.masteries[mastery.skill - 1] < mastery.mastery;
+        })
+        .slice(0, limit)
+        .map(mastery => ({
+            id: mastery.operator,
+            name: overallRatingDict[mastery.operator].name,
+            skill: `S${mastery.skill}`,
+            upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+            rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
+        })));
+
+    renderTable('breakpointTable', skillUpgrade, sortedMasteries
+        .filter(mastery => {
+            const userOp = userOps.find(op => op.op_id === mastery.operator);
+            return userOp && userOp.elite === 2 && userOp.masteries[mastery.skill - 1] < mastery.mastery && mastery.breakpoint;
+        })
+        .slice(0, limit)
+        .map(mastery => ({
+            id: mastery.operator,
+            name: overallRatingDict[mastery.operator].name,
+            skill: `S${mastery.skill}`,
+            upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+        })));
+
+    renderTable('moduleTable', symbolUpgradeRating, sortedModules
+        .filter(module => {
+            const userOp = userOps.find(op => op.op_id === module.operator);
+            return userOp && userOp.modules[module.module] < module.level;
+        })
+        .slice(0, limit)
+        .map(module => ({
+            id: module.operator,
+            name: overallRatingDict[module.operator].name,
+            symbol: module.symbol,
+            upgrade: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
+            rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
+        })));
+
+    renderTable('unleveledTable', tier, sortedOperators
+        .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
+        .slice(0, limit)
+        .map(operator => ({
+            id: operator.operator,
+            name: overallRatingDict[operator.operator].name,
+            tier: operator.tier.padEnd(2),
+        })));
+
+    renderTable('unownedTable', tier, sortedOperators
+        .filter(operator => !userOps.some(op => op.op_id === operator.operator))
+        .slice(0, limit)
+        .map(operator => ({
+            id: operator.operator,
+            name: overallRatingDict[operator.operator].name,
+            tier: operator.tier.padEnd(2),
+        })));
 }
 
 document.addEventListener('DOMContentLoaded', async function () {
@@ -532,4 +551,8 @@ document.addEventListener('DOMContentLoaded', async function () {
     byId('userInput').removeAttribute('disabled');
     byId('userSubmitBtn').addEventListener('click', userOnClick);
     byId('userSubmitBtn').removeAttribute('disabled');
+
+    byId('limit5').addEventListener('click', () => setLimit(5));
+    byId('limit15').addEventListener('click', () => setLimit(15));
+    byId('limit30').addEventListener('click', () => setLimit(30));
 });
