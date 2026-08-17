@@ -50,7 +50,7 @@ const proxyUrl = 'https://awedtan.ca/upgrade-viewer/proxy';
 // for masteries, sort them by rating = story+advanced
 // for modules, sort them by priority
 const ratingScale = ['F', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S-', 'S', 'S+', 'S++', 'EX'];
-const suggestionsLimit = 15;
+const suggestionsLimit = 5;
 
 let ops: any[];
 let overallRatingDict: { [key: string]: OverallRating } = {};
@@ -347,6 +347,11 @@ const symbolUpgradeRating: Column[] = [AVATAR, { field: 'symbol' }, { field: 'up
 const skillLevel: Column[] = [AVATAR, { field: 'skill' }, { field: 'level' }];
 const skillUpgrade: Column[] = [AVATAR, { field: 'skill' }, { field: 'upgrade' }];
 const tier: Column[] = [AVATAR, { field: 'tier' }];
+const investment: Column[] = [AVATAR, { field: 'tier' }, { field: 'level' }, { field: 'masteries' }, { field: 'modules' }, { field: 'potentials' }];
+function setLimit(limit: number) {
+    currentLimit = limit;
+    if (currentUserOps) renderAccountOverview(currentUserOps, limit);
+}
 
 function renderTable(tableId: string, cols: Column[], rows: Row[]) {
     const table = byId(tableId);
@@ -403,55 +408,7 @@ function renderOperatorLookup(op: OverallRating) {
             rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
         })));
 
-    renderTable('opUnownedTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
-}
-
-function setLimit(limit: number) {
-    currentLimit = limit;
-    if (currentUserOps) renderAccountOverview(currentUserOps, limit);
-}
-
-async function opOnClick() {
-    ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opUnownedTable'].forEach(e => byId(e).innerHTML = '');
-
-    const operatorName = (byId('opInput') as HTMLInputElement).value;
-    const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
-
-    if (!operator) {
-        alert(`Operator not found: ${operatorName}`);
-        return;
-    }
-
-    const op = getOpRating(operator.value.id, operatorName);
-
-    if (!op) {
-        alert(`Operator not found: ${operatorName}`);
-        return;
-    }
-
-    renderOperatorLookup(op);
-}
-
-async function userOnClick() {
-    const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unownedTable'];
-    elements.forEach((e: any) => byId(e).innerHTML = '');
-
-    const username = (byId('userInput') as HTMLInputElement).value;
-
-    if (!username)
-        return;
-
-    try {
-        const { userAccount, userOps } = await loadKrooster(username);
-        if (!userAccount || !userOps) {
-            alert(`User not found: ${username}`);
-            return;
-        }
-        currentUserOps = userOps;
-        renderAccountOverview(userOps, currentLimit);
-    } catch (error) {
-        console.error('An error occurred:', error);
-    }
+    renderTable('opRatingTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
 }
 
 function renderAccountOverview(userOps: KroosterOperator[], limit: number) {
@@ -513,6 +470,88 @@ function renderAccountOverview(userOps: KroosterOperator[], limit: number) {
             name: overallRatingDict[operator.operator].name,
             tier: operator.tier.padEnd(2),
         })));
+
+    const goodScore = (op: KroosterOperator) => investLevel(op) + (operatorRatingDict[op.op_id]?.rating ?? 0) / 2;
+    const badScore = (op: KroosterOperator) => investLevel(op) * (1 - (operatorRatingDict[op.op_id]?.rating ?? 0) / (ratingScale.length - 1));
+
+    const investmentRow = (op: KroosterOperator): Row => ({
+        id: op.op_id,
+        name: overallRatingDict[op.op_id]?.name ?? op.op_id,
+        tier: (operatorRatingDict[op.op_id]?.tier ?? 'N/A').padEnd(2),
+        level: `E${op.elite} L${op.level}`,
+        masteries: formatMasteries(op),
+        modules: formatModules(op),
+        potentials: `P${op.potential}`,
+    });
+
+    renderTable('goodTable', investment, [...userOps].sort((a, b) => goodScore(b) - goodScore(a)).slice(0, limit).map(investmentRow));
+    renderTable('badTable', investment, [...userOps].sort((a, b) => badScore(b) - badScore(a)).slice(0, limit).map(investmentRow));
+}
+
+function investLevel(op: KroosterOperator) {
+    const elite = op.elite / 2;
+    const level = (op.level - 1) / 79;
+    const skill = (op.skill_level - 1) / 6;
+    const masteries = op.masteries.reduce((acc, cur) => acc + cur, 0) / 3;
+    const modules = Object.values(op.modules).reduce((acc, cur) => acc + cur, 0) / 3;
+    const potentials = op.potential / 5;
+    return elite + level + skill + masteries + modules + potentials;
+}
+
+function formatMasteries(op: KroosterOperator) {
+    return [0, 1, 2].map(i => (op.masteries[i] ?? 0) > 0 ? `S${i + 1} M${op.masteries[i]}` : `S${i + 1} L${op.skill_level}`).join('\n');
+}
+
+function formatModules(op: KroosterOperator) {
+    const hellaOp = ops.find(e => e.value.id === op.op_id)?.value;
+    const rank: { [key: string]: number } = { X: 0, Y: 1, D: 2 };
+    return Object.entries(op.modules).map(([id, level]) => {
+        const typeName2 = hellaOp?.modules?.find((m: any) => m.info.uniEquipId === id)?.info.typeName2;
+        return { symbol: typeName2 === 'D' ? 'Δ' : (typeName2 ?? id), level, rank: rank[typeName2] ?? 9 };
+    }).sort((a, b) => a.rank - b.rank).map(m => `${m.symbol} L${m.level}`).join('\n');
+}
+
+async function opOnClick() {
+    ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opRatingTable'].forEach(e => byId(e).innerHTML = '');
+
+    const operatorName = (byId('opInput') as HTMLInputElement).value;
+    const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
+
+    if (!operator) {
+        alert(`Operator not found: ${operatorName}`);
+        return;
+    }
+
+    const op = getOpRating(operator.value.id, operatorName);
+
+    if (!op) {
+        alert(`Operator not found: ${operatorName}`);
+        return;
+    }
+
+    renderOperatorLookup(op);
+}
+
+async function userOnClick() {
+    const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unleveledTable', 'unownedTable', 'goodTable', 'badTable'];
+    elements.forEach((e: any) => byId(e).innerHTML = '');
+
+    const username = (byId('userInput') as HTMLInputElement).value;
+
+    if (!username)
+        return;
+
+    try {
+        const { userAccount, userOps } = await loadKrooster(username);
+        if (!userAccount || !userOps) {
+            alert(`User not found: ${username}`);
+            return;
+        }
+        currentUserOps = userOps;
+        renderAccountOverview(userOps, currentLimit);
+    } catch (error) {
+        console.error('An error occurred:', error);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', async function () {

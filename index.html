@@ -58,162 +58,199 @@
         <a href="https://docs.google.com/spreadsheets/d/1E7HmgKWiV8pKpJpvpVzziYxnaQTP01Vtw_PXEdL7XPA" target="_blank">Google Sheets</a>
     </p>
 
-    <h1>Operator Lookup</h2>
-        <div>
-            <label>Enter operator name:</label>
-            <input id="opInput" type="text" disabled />
-            <button id="opSubmitBtn" disabled>Submit</button>
-        </div>
-        <br>
-        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan=4>Mastery ratings</th>
-                    </tr>
-                    <tr>
-                        <th>Operator</th>
-                        <th>Skill</th>
-                        <th>Level</th>
-                        <th title="Story / Advanced">Rating (?)</th>
-                    </tr>
-                </thead>
-                <tbody id="opMasteryTable">
-                </tbody>
-            </table>
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan=3>Breakpoint masteries</th>
-                    </tr>
-                    <tr>
-                        <th>Operator</th>
-                        <th>Skill</th>
-                        <th>Level</th>
-                    </tr>
-                </thead>
-                <tbody id="opBreakpointTable">
-                </tbody>
-            </table>
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan=4>Module ratings</th>
-                    </tr>
-                    <tr>
-                        <th>Operator</th>
-                        <th>Module</th>
-                        <th>Level</th>
-                        <th title="Module Rating / Improvement to Character / Priority">Rating (?)</th>
-                    </tr>
-                </thead>
-                <tbody id="opModuleTable">
-                </tbody>
-            </table>
-            <table>
-                <thead>
-                    <tr>
-                        <th colspan=2>Operator rating</th>
-                    </tr>
-                    <tr>
-                        <th>Operator</th>
-                        <th>Rating</th>
-                    </tr>
-                </thead>
-                <tbody id="opUnownedTable">
-                </tbody>
-            </table>
-        </div>
+    <h1>Operator Lookup</h1>
+    <div>
+        <label>Enter operator name:</label>
+        <input id="opInput" type="text" disabled />
+        <button id="opSubmitBtn" disabled>Submit</button>
+    </div>
+    <br>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Mastery ratings</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Level</th>
+                    <th title="Story / Advanced">Rating (?)</th>
+                </tr>
+            </thead>
+            <tbody id="opMasteryTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=3>Breakpoint masteries</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+            <tbody id="opBreakpointTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Module ratings</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Module</th>
+                    <th>Level</th>
+                    <th title="Module Rating / Improvement to Character / Priority">Rating (?)</th>
+                </tr>
+            </thead>
+            <tbody id="opModuleTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=2>Operator rating</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody id="opRatingTable">
+            </tbody>
+        </table>
+    </div>
 
-        <h1>Account Overview</h2>
-            <div>
-                <label>Enter Krooster username:</label>
-                <input id="userInput" type="text" disabled />
-                <button id="userSubmitBtn" disabled>Submit</button>
-            </div>
-            <br>
-            <div>
-                <label>Results per table:</label>
-                <button id="limit5" type="button">5</button>
-                <button id="limit15" type="button">15</button>
-                <button id="limit30" type="button">30</button>
-            </div>
-            <h2>Recommended Upgrades</h3>
-                <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th colspan=4>Highly rated masteries</th>
-                            </tr>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Skill</th>
-                                <th>Upgrades</th>
-                                <th title="Story / Advanced">Rating (?)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="masteryTable">
-                        </tbody>
-                    </table>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th colspan=3>Breakpoint masteries (already E2)</th>
-                            </tr>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Skill</th>
-                                <th>Upgrades</th>
-                            </tr>
-                        </thead>
-                        <tbody id="breakpointTable">
-                        </tbody>
-                    </table>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th colspan=4>Highly rated modules</th>
-                            </tr>
-                            <tr>
-                                <th>Operator</th>
-                                <th>Module</th>
-                                <th>Upgrades</th>
-                                <th title="Module Rating / Improvement to Character / Priority">Rating (?)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="moduleTable">
-                        </tbody>
-                    </table>
-                </div>
-                <h2>Recommended Operators</h3>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th colspan=2>Highly rated unowned operators</th>
-                                </tr>
-                                <tr>
-                                    <th>Operator</th>
-                                    <th>Rating</th>
-                                </tr>
-                            </thead>
-                            <tbody id="unownedTable">
-                            </tbody>
-                        </table>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th colspan=2>Highly rated unleveled operators (not E2)</th>
-                                </tr>
-                                <tr>
-                                    <th>Operator</th>
-                                    <th>Rating</th>
-                                </tr>
-                            </thead>
-                            <tbody id="unleveledTable">
-                            </tbody>
-                        </table>
-                    </div>
+    <h1>Account Overview</h1>
+    <div>
+        <label>Enter Krooster username:</label>
+        <input id="userInput" type="text" disabled />
+        <button id="userSubmitBtn" disabled>Submit</button>
+    </div>
+    <br>
+    <div>
+        <label>Results per table:</label>
+        <button id="limit5" type="button">5</button>
+        <button id="limit15" type="button">15</button>
+        <button id="limit30" type="button">30</button>
+    </div>
+    <h2>Recommended Upgrades</h2>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Highly rated masteries</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Upgrades</th>
+                    <th title="Story / Advanced">Rating (?)</th>
+                </tr>
+            </thead>
+            <tbody id="masteryTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=3>Breakpoint masteries (already E2)</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Skill</th>
+                    <th>Upgrades</th>
+                </tr>
+            </thead>
+            <tbody id="breakpointTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=4>Highly rated modules</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Module</th>
+                    <th>Upgrades</th>
+                    <th title="Module Rating / Improvement to Character / Priority">Rating (?)</th>
+                </tr>
+            </thead>
+            <tbody id="moduleTable">
+            </tbody>
+        </table>
+    </div>
+    <h2>Recommended Operators</h2>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=2>Highly rated unowned operators</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody id="unownedTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=2>Highly rated unleveled operators (not E2)</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                </tr>
+            </thead>
+            <tbody id="unleveledTable">
+            </tbody>
+        </table>
+    </div>
+    <h2>Operator Investments</h2>
+    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=6>Good investments</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                    <th>Level</th>
+                    <th>Masteries</th>
+                    <th>Modules</th>
+                    <th>Potentials</th>
+                </tr>
+            </thead>
+            <tbody id="goodTable">
+            </tbody>
+        </table>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan=6>Bad investments</th>
+                </tr>
+                <tr>
+                    <th>Operator</th>
+                    <th>Rating</th>
+                    <th>Level</th>
+                    <th>Masteries</th>
+                    <th>Modules</th>
+                    <th>Potentials</th>
+                </tr>
+            </thead>
+            <tbody id="badTable">
+            </tbody>
+        </table>
+    </div>
 </body>
 
 </html>
