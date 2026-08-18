@@ -132,13 +132,14 @@
         <button id="userSubmitBtn" disabled>Submit</button>
     </div>
     <br>
+    <h2>Recommended Upgrades</h2>
     <div>
         <label>Results per table:</label>
-        <button id="limit5" type="button">5</button>
-        <button id="limit15" type="button">15</button>
-        <button id="limit30" type="button">30</button>
+        <button id="upgradeLimit5" type="button">5</button>
+        <button id="upgradeLimit15" type="button">15</button>
+        <button id="upgradeLimit30" type="button">30</button>
     </div>
-    <h2>Recommended Upgrades</h2>
+    <br>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <table>
             <thead>
@@ -186,6 +187,13 @@
         </table>
     </div>
     <h2>Recommended Operators</h2>
+    <div>
+        <label>Results per table:</label>
+        <button id="operatorLimit5" type="button">5</button>
+        <button id="operatorLimit15" type="button">15</button>
+        <button id="operatorLimit30" type="button">30</button>
+    </div>
+    <br>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <table>
             <thead>
@@ -215,11 +223,18 @@
         </table>
     </div>
     <h2>Operator Investments</h2>
+    <div>
+        <label>Results per table:</label>
+        <button id="investmentLimit5" type="button">5</button>
+        <button id="investmentLimit15" type="button">15</button>
+        <button id="investmentLimit30" type="button">30</button>
+    </div>
+    <br>
     <div style="display: flex; gap: 12px; flex-wrap: wrap;">
         <table>
             <thead>
                 <tr>
-                    <th colspan=6>Good investments</th>
+                    <th colspan=5>Good investments</th>
                 </tr>
                 <tr>
                     <th>Operator</th>
@@ -227,7 +242,6 @@
                     <th>Level</th>
                     <th>Masteries</th>
                     <th>Modules</th>
-                    <th>Potentials</th>
                 </tr>
             </thead>
             <tbody id="goodTable">
@@ -236,7 +250,7 @@
         <table>
             <thead>
                 <tr>
-                    <th colspan=6>Bad investments</th>
+                    <th colspan=5>Bad investments</th>
                 </tr>
                 <tr>
                     <th>Operator</th>
@@ -244,7 +258,6 @@
                     <th>Level</th>
                     <th>Masteries</th>
                     <th>Modules</th>
-                    <th>Potentials</th>
                 </tr>
             </thead>
             <tbody id="badTable">

@@ -13,7 +13,9 @@ let operatorRatingDict = {};
 let sortedMasteries;
 let sortedModules;
 let sortedOperators;
-let currentLimit = suggestionsLimit;
+let upgradeLimit = suggestionsLimit;
+let operatorLimit = suggestionsLimit;
+let investmentLimit = suggestionsLimit;
 let currentUserOps = null;
 const clean = (str) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
 function byId(id) {
@@ -106,9 +108,9 @@ async function loadMasteryRatings() {
                         skill: Number(!breakpoint ? currSkill[1] : row2[2][14]),
                         mastery: Number(!breakpoint ? currSkill[3] : row2[2][16]),
                         breakpoint: breakpoint,
-                        story: !breakpoint ? row2[2] ?? 'N/A' : 'N/A',
-                        advanced: !breakpoint ? row2[5].length ? row2[5] : row2[4] ?? 'N/A' : 'N/A',
-                        rating: [row2[2], row2[5]].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
+                        story: !breakpoint ? clean(row2[2]) ?? 'N/A' : 'N/A',
+                        advanced: !breakpoint ? clean(row2[5].length ? row2[5] : row2[4]) ?? 'N/A' : 'N/A',
+                        rating: [clean(row2[2]), clean(row2[5])].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
                     };
                     getOpRating(currOpId).masteries.push(currMastery);
                     masteryRatingDict[`${currMastery.operator}_${currMastery.skill}_${currMastery.mastery}`] = currMastery;
@@ -251,11 +253,21 @@ const symbolUpgradeRating = [AVATAR, { field: 'symbol' }, { field: 'upgrade' }, 
 const skillLevel = [AVATAR, { field: 'skill' }, { field: 'level' }];
 const skillUpgrade = [AVATAR, { field: 'skill' }, { field: 'upgrade' }];
 const tier = [AVATAR, { field: 'tier' }];
-const investment = [AVATAR, { field: 'tier' }, { field: 'level' }, { field: 'masteries' }, { field: 'modules' }, { field: 'potentials' }];
-function setLimit(limit) {
-    currentLimit = limit;
+const investment = [AVATAR, { field: 'tier' }, { field: 'level' }, { field: 'masteries' }, { field: 'modules' }];
+function setUpgradeLimit(limit) {
+    upgradeLimit = limit;
     if (currentUserOps)
-        renderAccountOverview(currentUserOps, limit);
+        renderUpgradeTables(currentUserOps);
+}
+function setOperatorLimit(limit) {
+    operatorLimit = limit;
+    if (currentUserOps)
+        renderOperatorTables(currentUserOps);
+}
+function setInvestmentLimit(limit) {
+    investmentLimit = limit;
+    if (currentUserOps)
+        renderInvestmentTables(currentUserOps);
 }
 function renderTable(tableId, cols, rows) {
     const table = byId(tableId);
@@ -311,13 +323,13 @@ function renderOperatorLookup(op) {
     })));
     renderTable('opRatingTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
 }
-function renderAccountOverview(userOps, limit) {
+function renderUpgradeTables(userOps) {
     renderTable('masteryTable', skillUpgradeRating, sortedMasteries
         .filter(mastery => {
         const userOp = userOps.find(op => op.op_id === mastery.operator);
         return userOp && userOp.masteries[mastery.skill - 1] < mastery.mastery;
     })
-        .slice(0, limit)
+        .slice(0, upgradeLimit)
         .map(mastery => ({
         id: mastery.operator,
         name: overallRatingDict[mastery.operator].name,
@@ -330,7 +342,7 @@ function renderAccountOverview(userOps, limit) {
         const userOp = userOps.find(op => op.op_id === mastery.operator);
         return userOp && userOp.elite === 2 && userOp.masteries[mastery.skill - 1] < mastery.mastery && mastery.breakpoint;
     })
-        .slice(0, limit)
+        .slice(0, upgradeLimit)
         .map(mastery => ({
         id: mastery.operator,
         name: overallRatingDict[mastery.operator].name,
@@ -342,7 +354,7 @@ function renderAccountOverview(userOps, limit) {
         const userOp = userOps.find(op => op.op_id === module.operator);
         return userOp && userOp.modules[module.module] < module.level;
     })
-        .slice(0, limit)
+        .slice(0, upgradeLimit)
         .map(module => ({
         id: module.operator,
         name: overallRatingDict[module.operator].name,
@@ -350,9 +362,11 @@ function renderAccountOverview(userOps, limit) {
         upgrade: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
         rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
     })));
+}
+function renderOperatorTables(userOps) {
     renderTable('unleveledTable', tier, sortedOperators
         .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
-        .slice(0, limit)
+        .slice(0, operatorLimit)
         .map(operator => ({
         id: operator.operator,
         name: overallRatingDict[operator.operator].name,
@@ -360,34 +374,77 @@ function renderAccountOverview(userOps, limit) {
     })));
     renderTable('unownedTable', tier, sortedOperators
         .filter(operator => !userOps.some(op => op.op_id === operator.operator))
-        .slice(0, limit)
+        .slice(0, operatorLimit)
         .map(operator => ({
         id: operator.operator,
         name: overallRatingDict[operator.operator].name,
         tier: operator.tier.padEnd(2),
     })));
-    const goodScore = (op) => investLevel(op) + (operatorRatingDict[op.op_id]?.rating ?? 0) / 2;
-    const badScore = (op) => investLevel(op) * (1 - (operatorRatingDict[op.op_id]?.rating ?? 0) / (ratingScale.length - 1));
+}
+function renderInvestmentTables(userOps) {
+    const ratedUserOps = userOps.filter(op => operatorRatingDict[op.op_id]);
     const investmentRow = (op) => ({
         id: op.op_id,
-        name: overallRatingDict[op.op_id]?.name ?? op.op_id,
-        tier: (operatorRatingDict[op.op_id]?.tier ?? 'N/A').padEnd(2),
+        name: overallRatingDict[op.op_id].name,
+        tier: operatorRatingDict[op.op_id].tier.padEnd(2),
         level: `E${op.elite} L${op.level}`,
         masteries: formatMasteries(op),
         modules: formatModules(op),
-        potentials: `P${op.potential}`,
     });
-    renderTable('goodTable', investment, [...userOps].sort((a, b) => goodScore(b) - goodScore(a)).slice(0, limit).map(investmentRow));
-    renderTable('badTable', investment, [...userOps].sort((a, b) => badScore(b) - badScore(a)).slice(0, limit).map(investmentRow));
+    renderTable('goodTable', investment, [...ratedUserOps].sort((a, b) => goodInvestmentScore(b) - goodInvestmentScore(a)).slice(0, investmentLimit).map(investmentRow));
+    renderTable('badTable', investment, [...ratedUserOps].sort((a, b) => badInvestmentScore(a) - badInvestmentScore(b)).slice(0, investmentLimit).map(investmentRow));
 }
-function investLevel(op) {
-    const elite = op.elite / 2;
-    const level = (op.level - 1) / 79;
-    const skill = (op.skill_level - 1) / 6;
-    const masteries = op.masteries.reduce((acc, cur) => acc + cur, 0) / 3;
-    const modules = Object.values(op.modules).reduce((acc, cur) => acc + cur, 0) / 3;
-    const potentials = op.potential / 5;
-    return elite + level + skill + masteries + modules + potentials;
+function renderAccountOverview(userOps) {
+    renderUpgradeTables(userOps);
+    renderOperatorTables(userOps);
+    renderInvestmentTables(userOps);
+}
+const maxRatingIndex = ratingScale.length - 1;
+// weights for the investment formulas; skill/module sums have up to 3 terms, so 1/3 keeps each component of the formula in a 0..1 range
+const investmentWeights = { A: 1, B: 1 / 3, C: 1 / 3 };
+function skillMasteryRating(opId, skill, mastery) {
+    // normalized 0..1 rating for a skill at a given mastery level; the exact (skill, mastery) row wins, then the nearest rated mastery; a skill with no rated masteries gets the worst rating (F -> 0)
+    const rated = overallRatingDict[opId].masteries.filter(m => m.skill === skill && !m.breakpoint);
+    const exact = rated.find(m => m.mastery === mastery);
+    if (exact)
+        return exact.rating / (2 * maxRatingIndex);
+    if (rated.length)
+        return rated.sort((a, b) => Math.abs(a.mastery - mastery) - Math.abs(b.mastery - mastery))[0].rating / (2 * maxRatingIndex);
+    return 0;
+}
+function moduleRating(opId, moduleId) {
+    // normalized 0..1 rating, or null if the module is unrated (unrated modules are ignored)
+    const module = moduleRatingDict[opId + moduleId];
+    return module ? module.rating / maxRatingIndex : null;
+}
+function goodInvestmentScore(op) {
+    const { A, B, C } = investmentWeights;
+    const opRating = operatorRatingDict[op.op_id].rating / maxRatingIndex;
+    const opLevel = (op.level - 1) / 89; // E0L1 = 0, E2L90 = 1
+    const skillSum = [1, 2, 3].map(skill => {
+        const mastery = op.masteries[skill - 1] ?? 0; // L7 = 0, M3 = 1
+        return skillMasteryRating(op.op_id, skill, mastery) * (mastery / 3);
+    }).reduce((a, b) => a + b, 0);
+    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
+        const rating = moduleRating(op.op_id, id);
+        return rating === null ? acc : acc + rating * (level / 3); // L0 = 0, L3 = 1
+    }, 0);
+    return A * (opRating * opLevel) + B * skillSum + C * moduleSum;
+}
+function badInvestmentScore(op) {
+    // negated good formula with ratings inverted: EX = 0, F = 1 (how bad the rating is)
+    const { A, B, C } = investmentWeights;
+    const opRating = 1 - operatorRatingDict[op.op_id].rating / maxRatingIndex;
+    const opLevel = (op.level - 1) / 89;
+    const skillSum = [1, 2, 3].map(skill => {
+        const mastery = op.masteries[skill - 1] ?? 0;
+        return (1 - skillMasteryRating(op.op_id, skill, mastery)) * (mastery / 3);
+    }).reduce((a, b) => a + b, 0);
+    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
+        const rating = moduleRating(op.op_id, id);
+        return rating === null ? acc : acc + (1 - rating) * (level / 3);
+    }, 0);
+    return -(A * (opRating * opLevel) + B * skillSum + C * moduleSum);
 }
 function formatMasteries(op) {
     return [0, 1, 2].map(i => (op.masteries[i] ?? 0) > 0 ? `S${i + 1} M${op.masteries[i]}` : `S${i + 1} L${op.skill_level}`).join('\n');
@@ -428,7 +485,7 @@ async function userOnClick() {
             return;
         }
         currentUserOps = userOps;
-        renderAccountOverview(userOps, currentLimit);
+        renderAccountOverview(userOps);
     }
     catch (error) {
         console.error('An error occurred:', error);
@@ -462,7 +519,13 @@ document.addEventListener('DOMContentLoaded', async function () {
     byId('userInput').removeAttribute('disabled');
     byId('userSubmitBtn').addEventListener('click', userOnClick);
     byId('userSubmitBtn').removeAttribute('disabled');
-    byId('limit5').addEventListener('click', () => setLimit(5));
-    byId('limit15').addEventListener('click', () => setLimit(15));
-    byId('limit30').addEventListener('click', () => setLimit(30));
+    byId('upgradeLimit5').addEventListener('click', () => setUpgradeLimit(5));
+    byId('upgradeLimit15').addEventListener('click', () => setUpgradeLimit(15));
+    byId('upgradeLimit30').addEventListener('click', () => setUpgradeLimit(30));
+    byId('operatorLimit5').addEventListener('click', () => setOperatorLimit(5));
+    byId('operatorLimit15').addEventListener('click', () => setOperatorLimit(15));
+    byId('operatorLimit30').addEventListener('click', () => setOperatorLimit(30));
+    byId('investmentLimit5').addEventListener('click', () => setInvestmentLimit(5));
+    byId('investmentLimit15').addEventListener('click', () => setInvestmentLimit(15));
+    byId('investmentLimit30').addEventListener('click', () => setInvestmentLimit(30));
 });
