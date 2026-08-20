@@ -1,32 +1,37 @@
-"use strict";
 const hellaApi = 'https://awedtan.ca/api';
 const proxyUrl = 'https://awedtan.ca/upgrade-viewer/proxy';
-// for masteries, sort them by rating = story+advanced
-// for modules, sort them by priority
-const ratingScale = ['F', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S-', 'S', 'S+', 'S++', 'EX'];
-const suggestionsLimit = 5;
+const ratingScale = ['F', 'D', 'C-', 'C', 'C+', 'B-', 'B', 'B+', 'A-', 'A', 'A+', 'S-', 'S', 'S+', 'S++', 'EX'];
+const skillLevelRating = [{ operator: true }, { field: 'skill' }, { field: 'level' }, { field: 'rating' }];
+const skillUpgradeRating = [{ operator: true }, { field: 'skill' }, { field: 'upgrade' }, { field: 'rating' }];
+const symbolLevelRating = [{ operator: true }, { field: 'symbol' }, { field: 'level' }, { field: 'rating' }];
+const symbolUpgradeRating = [{ operator: true }, { field: 'symbol' }, { field: 'upgrade' }, { field: 'rating' }];
+const skillLevel = [{ operator: true }, { field: 'skill' }, { field: 'level' }];
+const skillUpgrade = [{ operator: true }, { field: 'skill' }, { field: 'upgrade' }];
+const tier = [{ operator: true }, { field: 'tier' }];
+const investment = [{ operator: true }, { field: 'tier' }, { field: 'level' }, { field: 'masteries' }, { field: 'modules' }];
 let ops;
-let overallRatingDict = {};
-let masteryRatingDict = {};
-let moduleRatingDict = {};
-let operatorRatingDict = {};
+const overallRatings = new Map();
+const masteryRatings = new Map();
+const moduleRatings = new Map();
+const operatorRatings = new Map();
 let sortedMasteries;
 let sortedModules;
 let sortedOperators;
-let upgradeLimit = suggestionsLimit;
-let operatorLimit = suggestionsLimit;
-let investmentLimit = suggestionsLimit;
+const initialLimit = 5;
+let upgradeLimit = initialLimit;
+let operatorLimit = initialLimit;
+let investmentLimit = initialLimit;
 let currentUserOps = null;
 const clean = (str) => str?.replace(/['-*()]/g, '').replace(/[\n]/g, ' ').trim() ?? null;
-function byId(id) {
+function getById(id) {
     const elem = document.getElementById(id);
     if (!elem)
         throw new Error(`Missing element with id: ${id}`);
     return elem;
 }
-function getOpRating(opId, opName = '') {
-    if (!overallRatingDict[opId]) {
-        overallRatingDict[opId] = {
+function getOverallRating(opId, opName = '') {
+    if (!overallRatings.get(opId)) {
+        overallRatings.set(opId, {
             id: opId,
             name: opName,
             masteryDesc: '',
@@ -37,9 +42,248 @@ function getOpRating(opId, opName = '') {
                 tier: '',
                 rating: 0
             }
-        };
+        });
     }
-    return overallRatingDict[opId];
+    return overallRatings.get(opId);
+}
+function renderTable(tableId, cols, rows) {
+    const table = getById(tableId);
+    table.innerHTML = '';
+    for (const row of rows) {
+        const tr = document.createElement('tr');
+        for (const col of cols) {
+            const td = document.createElement('td');
+            if (col.operator) {
+                td.classList.add('operator');
+                const img = document.createElement('img');
+                const avatar = row.id === 'char_1037_amiya3' ? 'char_1037_amiya3_2' : row.id;
+                img.src = `https://raw.githubusercontent.com/Awedtan/HellaAssets/refs/heads/main/operator/avatars/${avatar}.png`;
+                img.alt = row.name;
+                const span = document.createElement('span');
+                span.textContent = row.name;
+                td.append(img, span);
+            }
+            else {
+                const pre = document.createElement('pre');
+                pre.textContent = row[col.field ?? ''];
+                td.appendChild(pre);
+            }
+            tr.appendChild(td);
+        }
+        table.appendChild(tr);
+    }
+}
+function renderUpgradeTables(userOps) {
+    renderTable('masteryTable', skillUpgradeRating, sortedMasteries
+        .filter(mastery => {
+        const userOp = userOps.find(op => op.op_id === mastery.operator);
+        return userOp && userOp.masteries[mastery.skill - 1] < mastery.mastery;
+    })
+        .slice(0, upgradeLimit)
+        .map(mastery => ({
+        id: mastery.operator,
+        name: getOverallRating(mastery.operator).name,
+        skill: `S${mastery.skill}`,
+        upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+        rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
+    })));
+    renderTable('breakpointTable', skillUpgrade, sortedMasteries
+        .filter(mastery => {
+        const userOp = userOps.find(op => op.op_id === mastery.operator);
+        return userOp && userOp.elite === 2 && userOp.masteries[mastery.skill - 1] < mastery.mastery && mastery.breakpoint;
+    })
+        .slice(0, upgradeLimit)
+        .map(mastery => ({
+        id: mastery.operator,
+        name: getOverallRating(mastery.operator).name,
+        skill: `S${mastery.skill}`,
+        upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
+    })));
+    renderTable('moduleTable', symbolUpgradeRating, sortedModules
+        .filter(module => {
+        const userOp = userOps.find(op => op.op_id === module.operator);
+        return userOp && userOp.modules[module.module] < module.level;
+    })
+        .slice(0, upgradeLimit)
+        .map(module => ({
+        id: module.operator,
+        name: getOverallRating(module.operator).name,
+        symbol: module.symbol,
+        upgrade: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
+        rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
+    })));
+}
+function renderOperatorTables(userOps) {
+    renderTable('unleveledTable', tier, sortedOperators
+        .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
+        .slice(0, operatorLimit)
+        .map(operator => ({
+        id: operator.operator,
+        name: getOverallRating(operator.operator).name,
+        tier: operator.tier.padEnd(2),
+    })));
+    renderTable('unownedTable', tier, sortedOperators
+        .filter(operator => !userOps.some(op => op.op_id === operator.operator))
+        .slice(0, operatorLimit)
+        .map(operator => ({
+        id: operator.operator,
+        name: getOverallRating(operator.operator).name,
+        tier: operator.tier.padEnd(2),
+    })));
+}
+function renderInvestmentTables(userOps) {
+    const ratedUserOps = userOps.filter(op => operatorRatings.has(op.op_id));
+    const rank = { X: 0, Y: 1, D: 2 };
+    const investmentRow = (op) => ({
+        id: op.op_id,
+        name: getOverallRating(op.op_id).name,
+        tier: operatorRatings.get(op.op_id)?.tier.padEnd(2),
+        level: `E${op.elite} L${op.level}`,
+        masteries: [0, 1, 2]
+            .map(i => (op.masteries[i] ?? 0) > 0 ? `S${i + 1} M${op.masteries[i]}` : `S${i + 1} L${op.skill_level}`).join('\n'),
+        modules: Object.entries(op.modules)
+            .map(([id, level]) => {
+            const typeName2 = ops.find(e => e.value.id === op.op_id)?.value?.modules?.find((m) => m.info.uniEquipId === id)?.info.typeName2 ?? '???';
+            return { symbol: typeName2 === 'D' ? 'Δ' : (typeName2 ?? id), level, rank: rank[typeName2] ?? 9 };
+        })
+            .sort((a, b) => a.rank - b.rank)
+            .map(m => `${m.symbol} L${m.level}`)
+            .join('\n'),
+    });
+    renderTable('goodTable', investment, [...ratedUserOps]
+        .sort((a, b) => goodInvest(b) - goodInvest(a))
+        .slice(0, investmentLimit).map(investmentRow));
+    renderTable('badTable', investment, [...ratedUserOps]
+        .sort((a, b) => badInvest(a) - badInvest(b))
+        .slice(0, investmentLimit).map(investmentRow));
+}
+const maxRatingIndex = ratingScale.length - 1;
+const investmentWeights = { A: 1, B: 1 / 3, C: 1 / 3 };
+function skillMasteryRating(opId, skill, mastery) {
+    // normalized 0..1 rating for a skill at a given mastery level; the exact (skill, mastery) row wins, then the nearest rated mastery; a skill with no rated masteries gets the worst rating (F -> 0)
+    const rated = getOverallRating(opId).masteries.filter(m => m.skill === skill && !m.breakpoint);
+    const exact = rated.find(m => m.mastery === mastery);
+    if (exact)
+        return exact.rating / (2 * maxRatingIndex);
+    if (rated.length)
+        return rated.sort((a, b) => Math.abs(a.mastery - mastery) - Math.abs(b.mastery - mastery))[0].rating / (2 * maxRatingIndex);
+    return 0;
+}
+function moduleRating(opId, moduleId) {
+    // normalized 0..1 rating, or null if the module is unrated (unrated modules are ignored)
+    const module = moduleRatings.get(moduleId);
+    return module ? module.rating / maxRatingIndex : null;
+}
+function goodInvest(op) {
+    const { A, B, C } = investmentWeights;
+    const opRating = operatorRatings.get(op.op_id)?.rating ?? 0 / maxRatingIndex;
+    const opLevel = (op.level - 1) / 89;
+    const skillSum = [1, 2, 3].map(skill => {
+        const mastery = op.masteries[skill - 1] ?? 0; // L7 = 0, M3 = 1
+        return skillMasteryRating(op.op_id, skill, mastery) * (mastery / 3);
+    }).reduce((a, b) => a + b, 0);
+    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
+        const rating = moduleRating(op.op_id, id);
+        return rating === null ? acc : acc + rating * (level / 3); // L0 = 0, L3 = 1
+    }, 0);
+    return A * (opRating * opLevel) + B * skillSum + C * moduleSum;
+}
+function badInvest(op) {
+    const { A, B, C } = investmentWeights;
+    const opRating = 1 - (operatorRatings.get(op.op_id)?.rating ?? 0) / maxRatingIndex;
+    const opLevel = (op.level - 1) / 89;
+    const skillSum = [1, 2, 3].map(skill => {
+        const mastery = op.masteries[skill - 1] ?? 0;
+        return (1 - skillMasteryRating(op.op_id, skill, mastery)) * (mastery / 3);
+    }).reduce((a, b) => a + b, 0);
+    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
+        const rating = moduleRating(op.op_id, id);
+        return rating === null ? acc : acc + (1 - rating) * (level / 3);
+    }, 0);
+    return -(A * (opRating * opLevel) + B * skillSum + C * moduleSum);
+}
+async function opOnClick() {
+    const operatorName = getById('opInput').value;
+    if (!operatorName)
+        return;
+    try {
+        const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
+        if (!operator)
+            throw new Error('Operator not found.');
+        const op = getOverallRating(operator.value.id, operatorName);
+        if (!op)
+            throw new Error('Operator rating not found.');
+        ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opRatingTable']
+            .forEach(e => getById(e).innerHTML = '');
+        renderTable('opMasteryTable', skillLevelRating, op.masteries
+            .filter(mastery => !mastery.breakpoint)
+            .map(mastery => ({
+            id: mastery.operator,
+            name: op.name,
+            skill: `S${mastery.skill}`,
+            level: `M${mastery.mastery}`,
+            rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
+        })));
+        renderTable('opBreakpointTable', skillLevel, op.masteries
+            .filter(mastery => mastery.breakpoint)
+            .map(mastery => ({
+            id: mastery.operator,
+            name: op.name,
+            skill: `S${mastery.skill}`,
+            level: `M${mastery.mastery}`,
+        })));
+        renderTable('opModuleTable', symbolLevelRating, op.modules
+            .map(module => ({
+            id: module.operator,
+            name: op.name,
+            symbol: module.symbol,
+            level: `L${module.level}`,
+            rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
+        })));
+        renderTable('opRatingTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
+    }
+    catch (e) {
+        alert(`Operator not found: ${operatorName}`);
+        console.error('Operator: ', e);
+    }
+}
+async function userOnClick() {
+    const username = getById('userInput').value;
+    if (!username)
+        return;
+    try {
+        const userAccount = (await (await fetch(`${proxyUrl}/krooster_accounts?username=${username}`)).json())[0];
+        if (!userAccount)
+            throw new Error('User account not found.');
+        const userOps = await (await fetch(`${proxyUrl}/krooster_operators?userId=${userAccount.user_id}`)).json();
+        if (!userOps)
+            throw new Error('User\'s operators not found.');
+        ['masteryTable', 'breakpointTable', 'moduleTable', 'unleveledTable', 'unownedTable', 'goodTable', 'badTable']
+            .forEach((e) => getById(e).innerHTML = '');
+        currentUserOps = userOps;
+        renderUpgradeTables(userOps);
+        renderOperatorTables(userOps);
+        renderInvestmentTables(userOps);
+    }
+    catch (e) {
+        alert(`User not found: ${username}`);
+        console.error('User: ', e);
+    }
+}
+function setUpgradeLimit(limit) {
+    upgradeLimit = limit;
+    if (currentUserOps)
+        renderUpgradeTables(currentUserOps);
+}
+function setOperatorLimit(limit) {
+    operatorLimit = limit;
+    if (currentUserOps)
+        renderOperatorTables(currentUserOps);
+}
+function setInvestmentLimit(limit) {
+    investmentLimit = limit;
+    if (currentUserOps)
+        renderInvestmentTables(currentUserOps);
 }
 async function loadMasteryRatings() {
     const masterySheetId = '1iJF12O6QOba1dlUVmobwvc1eBZE7FRB6-tKxmZEcG1I';
@@ -58,7 +302,7 @@ async function loadMasteryRatings() {
     const urls = masterySheetGids.map(gid => `${proxyUrl}/sheet?id=${masterySheetId}&gid=${gid}`);
     const responses = (await Promise.all(urls.map(url => fetch(url).then(response => response.text()))));
     const masterySheets = responses.map(data => JSON.parse(data.substring(47).slice(0, -2)));
-    let currOpId = '';
+    let currOpId;
     for (const sheet of masterySheets) {
         for (let i = 2; i < sheet.table.rows.length; i++) {
             const row = sheet.table.rows[i].c.map((e) => e?.v ?? '');
@@ -75,18 +319,12 @@ async function loadMasteryRatings() {
                     'Mr.Nothing': 'Mr. Nothing',
                 };
                 const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
-                try {
-                    currOpId = ops.find((e) => e.keys.includes(currOpName.toLowerCase())).value.id;
-                }
-                catch (e) {
-                    console.error(`Mastery: operator ${currOpName} not found`);
-                    continue;
-                }
+                currOpId = ops.find((e) => e.keys.includes(currOpName.toLowerCase()))?.value.id;
                 if (!currOpId) {
                     console.error(`Mastery: operator ${currOpName} not found`);
                     continue;
                 }
-                getOpRating(currOpId, currOpName).masteryDesc = row[9] ?? 'N/A';
+                getOverallRating(currOpId, currOpName).masteryDesc = row[9] ?? 'N/A';
                 let currSkill = '';
                 for (let j = i + 1; j < sheet.table.rows.length; j++) {
                     const row2 = sheet.table.rows[j].c.map((e) => e?.v ?? '');
@@ -112,8 +350,8 @@ async function loadMasteryRatings() {
                         advanced: !breakpoint ? clean(row2[5].length ? row2[5] : row2[4]) ?? 'N/A' : 'N/A',
                         rating: [clean(row2[2]), clean(row2[5])].reduce((acc, mastery) => acc + Math.max(0, ratingScale.indexOf(mastery)), 0)
                     };
-                    getOpRating(currOpId).masteries.push(currMastery);
-                    masteryRatingDict[`${currMastery.operator}_${currMastery.skill}_${currMastery.mastery}`] = currMastery;
+                    getOverallRating(currOpId).masteries.push(currMastery);
+                    masteryRatings.set(`${currMastery.operator}_${currMastery.skill}_${currMastery.mastery}`, currMastery);
                 }
             }
         }
@@ -141,14 +379,7 @@ async function loadModuleRatings() {
             'Chen Alter2': 'Chen the Dawnstreak'
         };
         const currOpName = clean(nameOverride[row[0]]) ?? clean(row[0]);
-        let currOp;
-        try {
-            currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
-        }
-        catch (e) {
-            console.error(`Module: operator ${currOpName} not found`);
-            continue;
-        }
+        let currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase()))?.value;
         if (!currOp) {
             console.error(`Module: operator ${currOpName} not found`);
             continue;
@@ -174,8 +405,8 @@ async function loadModuleRatings() {
             priority: row[7],
             rating: Math.max(0, ratingScale.indexOf(row[7])),
         };
-        getOpRating(currOp.id, currOpName).modules.push(currModule);
-        moduleRatingDict[currModule.operator + currModule.module] = currModule;
+        getOverallRating(currOp.id, currOpName).modules.push(currModule);
+        moduleRatings.set(currModule.module, currModule);
     }
     console.info('Module ratings loaded.');
 }
@@ -212,14 +443,7 @@ async function loadOperatorRatings() {
                 return nameOverride[name] ?? name;
             };
             const currOpName = clean(fixName(row[j])) ?? clean(row[j]);
-            let currOp;
-            try {
-                currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase())).value;
-            }
-            catch (e) {
-                console.error(`Operator: operator ${currOpName} not found`);
-                continue;
-            }
+            let currOp = ops.find(op => op.keys.includes(currOpName.toLowerCase()))?.value;
             if (!currOp) {
                 console.error(`Operator: operator ${currOpName} not found`);
                 continue;
@@ -229,266 +453,9 @@ async function loadOperatorRatings() {
                 tier: currRating,
                 rating: Math.max(0, ratingScale.indexOf(currRating))
             };
-            getOpRating(currOp.id, currOpName).operator = currOpRating;
-            operatorRatingDict[currOp.id] = currOpRating;
+            getOverallRating(currOp.id, currOpName).operator = currOpRating;
+            operatorRatings.set(currOp.id, currOpRating);
         }
-    }
-}
-async function loadKrooster(username) {
-    try {
-        const userAccount = (await (await fetch(`${proxyUrl}/krooster_accounts?username=${username}`)).json())[0];
-        const userId = userAccount.user_id;
-        const userOps = await (await fetch(`${proxyUrl}/krooster_operators?userId=${userId}`)).json();
-        return { userAccount, userOps };
-    }
-    catch (e) {
-        return { userAccount: null, userOps: null };
-    }
-}
-const AVATAR = { operator: true };
-const skillLevelRating = [AVATAR, { field: 'skill' }, { field: 'level' }, { field: 'rating' }];
-const skillUpgradeRating = [AVATAR, { field: 'skill' }, { field: 'upgrade' }, { field: 'rating' }];
-const symbolLevelRating = [AVATAR, { field: 'symbol' }, { field: 'level' }, { field: 'rating' }];
-const symbolUpgradeRating = [AVATAR, { field: 'symbol' }, { field: 'upgrade' }, { field: 'rating' }];
-const skillLevel = [AVATAR, { field: 'skill' }, { field: 'level' }];
-const skillUpgrade = [AVATAR, { field: 'skill' }, { field: 'upgrade' }];
-const tier = [AVATAR, { field: 'tier' }];
-const investment = [AVATAR, { field: 'tier' }, { field: 'level' }, { field: 'masteries' }, { field: 'modules' }];
-function setUpgradeLimit(limit) {
-    upgradeLimit = limit;
-    if (currentUserOps)
-        renderUpgradeTables(currentUserOps);
-}
-function setOperatorLimit(limit) {
-    operatorLimit = limit;
-    if (currentUserOps)
-        renderOperatorTables(currentUserOps);
-}
-function setInvestmentLimit(limit) {
-    investmentLimit = limit;
-    if (currentUserOps)
-        renderInvestmentTables(currentUserOps);
-}
-function renderTable(tableId, cols, rows) {
-    const table = byId(tableId);
-    table.innerHTML = '';
-    for (const row of rows) {
-        const tr = document.createElement('tr');
-        for (const col of cols) {
-            const td = document.createElement('td');
-            if (col.operator) {
-                td.classList.add('operator');
-                const img = document.createElement('img');
-                img.src = `https://raw.githubusercontent.com/Awedtan/HellaAssets/refs/heads/main/operator/avatars/${row.id}.png`;
-                img.alt = row.name;
-                const span = document.createElement('span');
-                span.textContent = row.name;
-                td.append(img, span);
-            }
-            else {
-                const pre = document.createElement('pre');
-                pre.textContent = row[col.field ?? ''];
-                td.appendChild(pre);
-            }
-            tr.appendChild(td);
-        }
-        table.appendChild(tr);
-    }
-}
-function renderOperatorLookup(op) {
-    renderTable('opMasteryTable', skillLevelRating, op.masteries
-        .filter(mastery => !mastery.breakpoint)
-        .map(mastery => ({
-        id: mastery.operator,
-        name: overallRatingDict[mastery.operator].name,
-        skill: `S${mastery.skill}`,
-        level: `M${mastery.mastery}`,
-        rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
-    })));
-    renderTable('opBreakpointTable', skillLevel, op.masteries
-        .filter(mastery => mastery.breakpoint)
-        .map(mastery => ({
-        id: mastery.operator,
-        name: overallRatingDict[mastery.operator].name,
-        skill: `S${mastery.skill}`,
-        level: `M${mastery.mastery}`,
-    })));
-    renderTable('opModuleTable', symbolLevelRating, op.modules
-        .map(module => ({
-        id: module.operator,
-        name: overallRatingDict[module.operator].name,
-        symbol: module.symbol,
-        level: `L${module.level}`,
-        rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
-    })));
-    renderTable('opRatingTable', tier, [{ id: op.id, name: op.name, tier: op.operator.tier.padEnd(2) }]);
-}
-function renderUpgradeTables(userOps) {
-    renderTable('masteryTable', skillUpgradeRating, sortedMasteries
-        .filter(mastery => {
-        const userOp = userOps.find(op => op.op_id === mastery.operator);
-        return userOp && userOp.masteries[mastery.skill - 1] < mastery.mastery;
-    })
-        .slice(0, upgradeLimit)
-        .map(mastery => ({
-        id: mastery.operator,
-        name: overallRatingDict[mastery.operator].name,
-        skill: `S${mastery.skill}`,
-        upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
-        rating: `${mastery.story.padEnd(4)}/ ${mastery.advanced.padEnd(3)}`,
-    })));
-    renderTable('breakpointTable', skillUpgrade, sortedMasteries
-        .filter(mastery => {
-        const userOp = userOps.find(op => op.op_id === mastery.operator);
-        return userOp && userOp.elite === 2 && userOp.masteries[mastery.skill - 1] < mastery.mastery && mastery.breakpoint;
-    })
-        .slice(0, upgradeLimit)
-        .map(mastery => ({
-        id: mastery.operator,
-        name: overallRatingDict[mastery.operator].name,
-        skill: `S${mastery.skill}`,
-        upgrade: `M${userOps.find(op => op.op_id === mastery.operator)?.masteries[mastery.skill - 1]} > M${mastery.mastery}`,
-    })));
-    renderTable('moduleTable', symbolUpgradeRating, sortedModules
-        .filter(module => {
-        const userOp = userOps.find(op => op.op_id === module.operator);
-        return userOp && userOp.modules[module.module] < module.level;
-    })
-        .slice(0, upgradeLimit)
-        .map(module => ({
-        id: module.operator,
-        name: overallRatingDict[module.operator].name,
-        symbol: module.symbol,
-        upgrade: `L${userOps.find(op => op.op_id === module.operator)?.modules[module.module]} > L${module.level}`,
-        rating: `${module.moduleRating.padEnd(3)}/ ${module.improveChar.padEnd(3)}/ ${module.priority.padEnd(2)}`,
-    })));
-}
-function renderOperatorTables(userOps) {
-    renderTable('unleveledTable', tier, sortedOperators
-        .filter(operator => userOps.some(op => op.op_id === operator.operator && op.elite !== 2))
-        .slice(0, operatorLimit)
-        .map(operator => ({
-        id: operator.operator,
-        name: overallRatingDict[operator.operator].name,
-        tier: operator.tier.padEnd(2),
-    })));
-    renderTable('unownedTable', tier, sortedOperators
-        .filter(operator => !userOps.some(op => op.op_id === operator.operator))
-        .slice(0, operatorLimit)
-        .map(operator => ({
-        id: operator.operator,
-        name: overallRatingDict[operator.operator].name,
-        tier: operator.tier.padEnd(2),
-    })));
-}
-function renderInvestmentTables(userOps) {
-    const ratedUserOps = userOps.filter(op => operatorRatingDict[op.op_id]);
-    const investmentRow = (op) => ({
-        id: op.op_id,
-        name: overallRatingDict[op.op_id].name,
-        tier: operatorRatingDict[op.op_id].tier.padEnd(2),
-        level: `E${op.elite} L${op.level}`,
-        masteries: formatMasteries(op),
-        modules: formatModules(op),
-    });
-    renderTable('goodTable', investment, [...ratedUserOps].sort((a, b) => goodInvestmentScore(b) - goodInvestmentScore(a)).slice(0, investmentLimit).map(investmentRow));
-    renderTable('badTable', investment, [...ratedUserOps].sort((a, b) => badInvestmentScore(a) - badInvestmentScore(b)).slice(0, investmentLimit).map(investmentRow));
-}
-function renderAccountOverview(userOps) {
-    renderUpgradeTables(userOps);
-    renderOperatorTables(userOps);
-    renderInvestmentTables(userOps);
-}
-const maxRatingIndex = ratingScale.length - 1;
-// weights for the investment formulas; skill/module sums have up to 3 terms, so 1/3 keeps each component of the formula in a 0..1 range
-const investmentWeights = { A: 1, B: 1 / 3, C: 1 / 3 };
-function skillMasteryRating(opId, skill, mastery) {
-    // normalized 0..1 rating for a skill at a given mastery level; the exact (skill, mastery) row wins, then the nearest rated mastery; a skill with no rated masteries gets the worst rating (F -> 0)
-    const rated = overallRatingDict[opId].masteries.filter(m => m.skill === skill && !m.breakpoint);
-    const exact = rated.find(m => m.mastery === mastery);
-    if (exact)
-        return exact.rating / (2 * maxRatingIndex);
-    if (rated.length)
-        return rated.sort((a, b) => Math.abs(a.mastery - mastery) - Math.abs(b.mastery - mastery))[0].rating / (2 * maxRatingIndex);
-    return 0;
-}
-function moduleRating(opId, moduleId) {
-    // normalized 0..1 rating, or null if the module is unrated (unrated modules are ignored)
-    const module = moduleRatingDict[opId + moduleId];
-    return module ? module.rating / maxRatingIndex : null;
-}
-function goodInvestmentScore(op) {
-    const { A, B, C } = investmentWeights;
-    const opRating = operatorRatingDict[op.op_id].rating / maxRatingIndex;
-    const opLevel = (op.level - 1) / 89; // E0L1 = 0, E2L90 = 1
-    const skillSum = [1, 2, 3].map(skill => {
-        const mastery = op.masteries[skill - 1] ?? 0; // L7 = 0, M3 = 1
-        return skillMasteryRating(op.op_id, skill, mastery) * (mastery / 3);
-    }).reduce((a, b) => a + b, 0);
-    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
-        const rating = moduleRating(op.op_id, id);
-        return rating === null ? acc : acc + rating * (level / 3); // L0 = 0, L3 = 1
-    }, 0);
-    return A * (opRating * opLevel) + B * skillSum + C * moduleSum;
-}
-function badInvestmentScore(op) {
-    // negated good formula with ratings inverted: EX = 0, F = 1 (how bad the rating is)
-    const { A, B, C } = investmentWeights;
-    const opRating = 1 - operatorRatingDict[op.op_id].rating / maxRatingIndex;
-    const opLevel = (op.level - 1) / 89;
-    const skillSum = [1, 2, 3].map(skill => {
-        const mastery = op.masteries[skill - 1] ?? 0;
-        return (1 - skillMasteryRating(op.op_id, skill, mastery)) * (mastery / 3);
-    }).reduce((a, b) => a + b, 0);
-    const moduleSum = Object.entries(op.modules).reduce((acc, [id, level]) => {
-        const rating = moduleRating(op.op_id, id);
-        return rating === null ? acc : acc + (1 - rating) * (level / 3);
-    }, 0);
-    return -(A * (opRating * opLevel) + B * skillSum + C * moduleSum);
-}
-function formatMasteries(op) {
-    return [0, 1, 2].map(i => (op.masteries[i] ?? 0) > 0 ? `S${i + 1} M${op.masteries[i]}` : `S${i + 1} L${op.skill_level}`).join('\n');
-}
-function formatModules(op) {
-    const hellaOp = ops.find(e => e.value.id === op.op_id)?.value;
-    const rank = { X: 0, Y: 1, D: 2 };
-    return Object.entries(op.modules).map(([id, level]) => {
-        const typeName2 = hellaOp?.modules?.find((m) => m.info.uniEquipId === id)?.info.typeName2;
-        return { symbol: typeName2 === 'D' ? 'Δ' : (typeName2 ?? id), level, rank: rank[typeName2] ?? 9 };
-    }).sort((a, b) => a.rank - b.rank).map(m => `${m.symbol} L${m.level}`).join('\n');
-}
-async function opOnClick() {
-    ['opMasteryTable', 'opBreakpointTable', 'opModuleTable', 'opRatingTable'].forEach(e => byId(e).innerHTML = '');
-    const operatorName = byId('opInput').value;
-    const operator = ops.find(op => op.keys.includes(operatorName.toLowerCase()));
-    if (!operator) {
-        alert(`Operator not found: ${operatorName}`);
-        return;
-    }
-    const op = getOpRating(operator.value.id, operatorName);
-    if (!op) {
-        alert(`Operator not found: ${operatorName}`);
-        return;
-    }
-    renderOperatorLookup(op);
-}
-async function userOnClick() {
-    const elements = ['masteryTable', 'breakpointTable', 'moduleTable', 'unleveledTable', 'unownedTable', 'goodTable', 'badTable'];
-    elements.forEach((e) => byId(e).innerHTML = '');
-    const username = byId('userInput').value;
-    if (!username)
-        return;
-    try {
-        const { userAccount, userOps } = await loadKrooster(username);
-        if (!userAccount || !userOps) {
-            alert(`User not found: ${username}`);
-            return;
-        }
-        currentUserOps = userOps;
-        renderAccountOverview(userOps);
-    }
-    catch (error) {
-        console.error('An error occurred:', error);
     }
 }
 document.addEventListener('DOMContentLoaded', async function () {
@@ -500,32 +467,33 @@ document.addEventListener('DOMContentLoaded', async function () {
         loadOperatorRatings()
     ]);
     console.info('Data successfully loaded.');
-    sortedMasteries = Object.values(masteryRatingDict).sort((a, b) => b.rating - a.rating);
-    sortedModules = Object.values(moduleRatingDict).sort((a, b) => b.rating - a.rating);
-    sortedOperators = Object.values(operatorRatingDict).sort((a, b) => b.rating - a.rating);
-    byId('opInput').addEventListener('keypress', (e) => {
+    sortedMasteries = masteryRatings.values().toArray().sort((a, b) => b.rating - a.rating);
+    sortedModules = moduleRatings.values().toArray().sort((a, b) => b.rating - a.rating);
+    sortedOperators = operatorRatings.values().toArray().sort((a, b) => b.rating - a.rating);
+    getById('opInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            byId('opSubmitBtn').click();
+            getById('opSubmitBtn').click();
         }
     });
-    byId('opInput').removeAttribute('disabled');
-    byId('opSubmitBtn').addEventListener('click', opOnClick);
-    byId('opSubmitBtn').removeAttribute('disabled');
-    byId('userInput').addEventListener('keypress', (e) => {
+    getById('opInput').removeAttribute('disabled');
+    getById('opSubmitBtn').addEventListener('click', opOnClick);
+    getById('opSubmitBtn').removeAttribute('disabled');
+    getById('userInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
-            byId('userSubmitBtn').click();
+            getById('userSubmitBtn').click();
         }
     });
-    byId('userInput').removeAttribute('disabled');
-    byId('userSubmitBtn').addEventListener('click', userOnClick);
-    byId('userSubmitBtn').removeAttribute('disabled');
-    byId('upgradeLimit5').addEventListener('click', () => setUpgradeLimit(5));
-    byId('upgradeLimit15').addEventListener('click', () => setUpgradeLimit(15));
-    byId('upgradeLimit30').addEventListener('click', () => setUpgradeLimit(30));
-    byId('operatorLimit5').addEventListener('click', () => setOperatorLimit(5));
-    byId('operatorLimit15').addEventListener('click', () => setOperatorLimit(15));
-    byId('operatorLimit30').addEventListener('click', () => setOperatorLimit(30));
-    byId('investmentLimit5').addEventListener('click', () => setInvestmentLimit(5));
-    byId('investmentLimit15').addEventListener('click', () => setInvestmentLimit(15));
-    byId('investmentLimit30').addEventListener('click', () => setInvestmentLimit(30));
+    getById('userInput').removeAttribute('disabled');
+    getById('userSubmitBtn').addEventListener('click', userOnClick);
+    getById('userSubmitBtn').removeAttribute('disabled');
+    getById('upgradeLimit5').addEventListener('click', () => setUpgradeLimit(5));
+    getById('upgradeLimit15').addEventListener('click', () => setUpgradeLimit(15));
+    getById('upgradeLimit30').addEventListener('click', () => setUpgradeLimit(30));
+    getById('operatorLimit5').addEventListener('click', () => setOperatorLimit(5));
+    getById('operatorLimit15').addEventListener('click', () => setOperatorLimit(15));
+    getById('operatorLimit30').addEventListener('click', () => setOperatorLimit(30));
+    getById('investmentLimit5').addEventListener('click', () => setInvestmentLimit(5));
+    getById('investmentLimit15').addEventListener('click', () => setInvestmentLimit(15));
+    getById('investmentLimit30').addEventListener('click', () => setInvestmentLimit(30));
 });
+export {};

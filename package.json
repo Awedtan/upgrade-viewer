@@ -5,5 +5,8 @@
     },
     "devDependencies": {
         "typescript": "^7.0.2"
+    },
+    "dependencies": {
+        "hella-types": "^0.3.2"
     }
 }
